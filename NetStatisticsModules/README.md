@@ -12,20 +12,20 @@ Put the zip-file to a folder "World_of_Tanks\mods\X.X.X\"
 ---    
 Events access:
 ```
-from gui.mods.XVMStatistics import g_XVMStatisticsEvents
+*from gui.mods.XVMStatistics import g_XVMStatisticsEvents*
 
 #Returns the statistics of the player during authorization in the game client,
 #if there is no data on the server or there is no connection or there is no token, it returns None
-g_XVMStatisticsEvents.OnStatsAccountBecomePlayer(-> dict or None)
-#{"b":19807,
-# "e":1462,
-# "v":{"63505":{"b":1,"w":0,"cap":0,"def":0,"dmg":52,"frg":0,"spo":0,"srv":0,"wtr":753}, ...},
-# "w":11594,
-# "dt":"2018-01-30T00:52:23.465+00:00",
-# "nm":"StranikS_Scan",
-# "ts":1517273543000,"xp":null,"_id":2365719,"cap":38210,"cid":69731,"def":14537,"dmg":29176230,"frg":23928,"hip":71,"lvl":7.53855,
-# "spo":22198,"srv":null,"wgr":8989,"wn8":2103,"wtr":6744,"flag":null,"lang":null,"dmg_r":null,"max_xp":null,
-# "status":1,"max_dmg":null,"max_frg":null,"is_banned":null}
+*g_XVMStatisticsEvents.OnStatsAccountBecomePlayer(-> dict or None)*
+    #{"b":19807,
+    # "e":1462,
+    # "v":{"63505":{"b":1,"w":0,"cap":0,"def":0,"dmg":52,"frg":0,"spo":0,"srv":0,"wtr":753}, ...},
+    # "w":11594,
+    # "dt":"2018-01-30T00:52:23.465+00:00",
+    # "nm":"StranikS_Scan",
+    # "ts":1517273543000,"xp":null,"_id":2365719,"cap":38210,"cid":69731,"def":14537,"dmg":29176230,"frg":23928,"hip":71,"lvl":7.53855,
+    # "spo":22198,"srv":null,"wgr":8989,"wn8":2103,"wtr":6744,"flag":null,"lang":null,"dmg_r":null,"max_xp":null,
+    # "status":1,"max_dmg":null,"max_frg":null,"is_banned":null}
 
 #Returns the statistics of all players when the battle is loaded,
 #if there is no connection to the server or there is no token, then it returns None
