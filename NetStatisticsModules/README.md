@@ -99,7 +99,7 @@ from gui.mods.VictoryChances import g_StatisticEvents
   g_StatisticEvents.OnBattleLoaded(-> statistic=class)
 
   #It works when the players and the parameters of the tanks change
-  #Returns a pointer to g_TanksStatistic, reasone type as UPDATE_REASONE and vihicleID
+  #Returns a pointer to g_TanksStatistic, reasone type as UPDATE_REASONE and vehicleID
   g_StatisticEvents.OnVehiclesChanged(-> statistic=class, reasone=int, vID=int)
 
   #It works when change the count of tanks in teams
