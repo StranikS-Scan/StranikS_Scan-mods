@@ -1,0 +1,12 @@
+<ZoomIndicator.font>
+	<creation>
+		<sourceFont>	Arial	</sourceFont>
+		<sourceFontSize> -18 </sourceFontSize>
+		<startChar>	0	</startChar>
+		<endChar>	255	</endChar>
+		<effectsMargin>	1.0	</effectsMargin>
+		<textureMargin>	1.0	</textureMargin>
+		<dropShadow>	true	</dropShadow>
+		<shadowAlpha>	128	</shadowAlpha>
+	</creation>
+</ZoomIndicator.font>
