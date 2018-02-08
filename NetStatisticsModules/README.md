@@ -11,7 +11,7 @@ Put the zip-file to a folder "World_of_Tanks\mods\X.X.X\"
 #### Module "XVMStatistics"
 ---    
 Events access:
-'''
+```
 from gui.mods.XVMStatistics import g_XVMStatisticsEvents
 
 #Returns the statistics of the player during authorization in the game client,
@@ -47,4 +47,4 @@ g_XVMStatisticsEvents.OnStatsBattleLoaded(-> dict or None)
 #             "ts":1517552268047,"xp":14205000,"_id":4100782,"cap":24261,"cid":null,"def":22125,"dmg":33753828,"frg":26228,"hip":51,"lvl":7.27749,
 #             "spo":40334,"srv":8651,"wgr":4981,"wn8":1082,"wtr":4186,
 #             "flag":null,"lang":null,"dmg_r":25312886,"max_xp":2306,"status":null,"max_dmg":6392,"max_frg":8,"is_banned":null}]}
-'''
+```
