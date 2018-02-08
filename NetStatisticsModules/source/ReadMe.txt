@@ -1,17 +1,17 @@
-+========================================================+
-|                                                        |
-|              NET.STATICTICS.MODULES                    |
-|            by StranikS_Scan & Spoter                   |
-|         for http://www.koreanrandom.com                |
-|                                                        |
-+========================================================+
++================================================================+
+|                                                                |
+|                  NET.STATICTICS.MODULES                        |
+|                by StranikS_Scan & Spoter                       |
+|             for http://www.koreanrandom.com                    |
+|                                                                |
++================================================================+
 
 Repository:
 https://github.com/StranikS-Scan/StranikS_Scan-mods
 
 List of modules:
-- "XVMStatistics"      (getting statistics from the XVM-server)
-- "VictoryChances"     (calculation of chances for victory in battle)
+- "XVMStatistics"   (getting statistics from the XVM-server)
+- "VictoryChances"  (calculation of chances for victory in battle)
 
 Using:
 
@@ -54,7 +54,7 @@ Using:
     #             "spo":40334,"srv":8651,"wgr":4981,"wn8":1082,"wtr":4186,
     #             "flag":null,"lang":null,"dmg_r":25312886,"max_xp":2306,"status":null,"max_dmg":6392,"max_frg":8,"is_banned":null}]}
 
- Ñonsole access:
+ Console access:
   #If there is no connection to the server or there is no token, then it returns None
   from gui.mods.XVMStatistics import g_XVMConsole
 
