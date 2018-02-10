@@ -83,9 +83,14 @@ Other:
 #Used token
 from gui.mods.XVMStatistics import g_UserToken
 
-g_UserToken.accountDBID  -> int or None
-g_UserToken.userToken    -> str or None
-g_UserToken.errorStatus  -> str
+  g_UserToken.accountDBID  -> int or None
+  g_UserToken.userToken    -> str or None
+
+  #Default value is '', can also take values:
+  #- 'you need to be logged in once for authorization!'
+  #- 'requires activation on the XVM-site (https://modxvm.com/)!'
+  #- 'no connection to the XVM-server!'
+  g_UserToken.errorStatus  -> str
 ```
 ---
 #### Module "VictoryChances"
