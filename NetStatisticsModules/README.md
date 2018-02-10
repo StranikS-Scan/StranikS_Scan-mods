@@ -57,26 +57,26 @@ from gui.mods.XVMStatistics import g_XVMConsole
 
   #Return info by current version of XVM and icons list of 50-top clans
   g_XVMConsole.getVersionWithLimit() -> dict or None
-  g_XVMConsole.getVersionWithLimit_Async(onAsyncReport=None)
+  g_XVMConsole.getVersionWithLimit_Async(onAsyncReport=func or None)
 
   #Return statistics for one player with all the tanks by a accountDBID
   #example accountDBID=2365719
   g_XVMConsole.getStatsByID(accountDBID=int) -> dict or None
-  g_XVMConsole.getStatsByID_Async(accountDBID=int, onAsyncReport=None)
+  g_XVMConsole.getStatsByID_Async(accountDBID=int, onAsyncReport=func or None)
 
   #The same, but with the help of the player's nickname
   #example region='RU', nick='StranikS_Scan'
   g_XVMConsole.getStatsByNick(region=str, nick=str) -> dict or None
-  g_XVMConsole.getStatsByNick_Async(region=str, nick=str, onAsyncReport=None)
+  g_XVMConsole.getStatsByNick_Async(region=str, nick=str, onAsyncReport=func or None)
 
   #Return statistics for a specific tank for one or multiple users
   #example ids = {2365719:54529, 4100782:51841, accountDBID:compactDescr, ...}
   g_XVMConsole.getStats(ids=dict) -> dict or None
-  g_XVMConsole.getStats_Async(ids=dict, onAsyncReport=None)
+  g_XVMConsole.getStats_Async(ids=dict, onAsyncReport=func or None)
 
   #Return online WOT-server statistics
   g_XVMConsole.getOnlineUsersCount() -> dict or None
-  g_XVMConsole.getOnlineUsersCount_Async(onAsyncReport=None)
+  g_XVMConsole.getOnlineUsersCount_Async(onAsyncReport=func or None)
 ```
 Other:
 ```
