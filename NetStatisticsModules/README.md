@@ -7,6 +7,9 @@
 ## Install
 Put the zip-file to a folder "World_of_Tanks\mods\X.X.X\"
 
+## History
+With the history of versions can be found [here][]
+
 ## Terms of Use
 #### Module "XVMStatistics"
 Events access:
@@ -87,9 +90,9 @@ from gui.mods.XVMStatistics import g_UserToken
   g_UserToken.userToken    -> str or None
 
   #Default value is '', can also take values:
-  #- 'you need to be logged in once for authorization!'
-  #- 'requires activation on the XVM-site (https://modxvm.com/)!'
-  #- 'no connection to the XVM-server!'
+  #'you need to be logged in once for authorization!'
+  #'requires activation on the XVM-site (https://modxvm.com/)!'
+  #'no connection to the XVM-server!'
   g_UserToken.errorStatus  -> str
 ```
 ---
@@ -145,3 +148,5 @@ from gui.mods.VictoryChances import UPDATE_REASONE
   UPDATE_REASONE.VEHICLE_DEATH  -> int
   UPDATE_REASONE.HEALTH_CHANGED -> int
 ```
+
+[here]:./HISTORY.md

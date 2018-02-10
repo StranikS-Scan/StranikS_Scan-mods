@@ -1,9 +1,9 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V2.0 P2.7 W0.9.21 16.01.2018'
+__version__ = 'V2.1 P2.7 W0.9.22 10.02.2018'
 
-import GUI, Event, BattleReplay
+import BigWorld, GUI, Event, BattleReplay, Keys
 from gui.Scaleform.framework.entities.BaseDAAPIComponent import BaseDAAPIComponent
 from gui.Scaleform.framework.entities.View import View
 from gui.Scaleform.framework.managers.loaders import ViewLoadParams
@@ -12,6 +12,7 @@ from gui.shared import g_eventBus, events, EVENT_BUS_SCOPE
 from gui.Scaleform.genConsts.BATTLE_VIEW_ALIASES import BATTLE_VIEW_ALIASES
 from gui.app_loader import g_appLoader
 from gui import g_guiResetters
+from gui import InputHandler
 
 from Avatar import PlayerAvatar
 
@@ -27,6 +28,8 @@ LOG_FILENAME    = None
 
 SHOW_INFO  = True
 SHOW_ITEMS = {}
+KEYS_SHOWHIDEALL = {}
+KEYS_TANKSLIST = {}
 PRINT_LOG  = True
 PRINT_ITEMS = {}
 
@@ -386,15 +389,10 @@ class FlashTextLabel(object):
         self.begin = '<font face="%s" size="%d" color="%s">%s%s' % (self.font, self.size, self.color, '<b>' if self.bold else '', '<i>' if self.italic else '')
         self.end   = '%s%s</font>' % ('</b>' if self.bold else '', '</i>' if self.italic else '')
         #---
-        self.config = params['Config'] if 'Config' in params else None
-        self.section = params['Section'] if 'Section' in params else None
-        self.key = params['Key'] if 'Key' in params else None
-        if self.config and self.section and self.key:
-            g_flashTextLabels.OnUpdatePosition += self.updatePosition
+        g_flashTextLabels.OnUpdatePosition += self.updatePosition
 
     def __del__(self):
-        if self.config and self.section and self.key:
-            g_flashTextLabels.OnUpdatePosition -= self.updatePosition
+        g_flashTextLabels.OnUpdatePosition -= self.updatePosition
         self.ui = None
 
     def setPosition(self, pos):
@@ -404,37 +402,37 @@ class FlashTextLabel(object):
 
     def updatePosition(self, container, x, y):
         if container == self.container:
-            if x > 0 or y > 0:
+            if x != 0 or y != 0:
                 self.x += x
                 self.y += y
-                if not BigWorld.new_ConfigLoader.configWritePositionValue(self.config, self.section, self.key, (self.x, self.y)):
-                    g_flashTextLabels.OnUpdatePosition -= self.updatePosition
+                if CONFIG_FILENAME:
+                    s = re.sub('"Position"\s*:\s*\[\s*-?\s*\d+\s*,\s*-?\s*\d+\s*\]', '"Position": [%s,%s]' % (self.x, self.y), codecs.open(CONFIG_FILENAME, 'r', 'utf-8-sig').read())
+                    with codecs.open(CONFIG_FILENAME, 'w', 'utf-8-sig') as f:
+                        f.write(s)
 
     def getSimpleTextWithTags(self, text):
-        return self.begin + text + self.end if text and self.visible else ''
+        return self.begin + text + self.end if text else ''
 
     def getHtmlTextWithTags(self, text, font=None, size=None, color=None, bold=None, italic=None):
         return '<font face="%s" size="%d" color="%s">%s%s%s%s%s</font>' % (font if font else self.font, size if size else self.size,
                color if color else self.color, '<b>' if bold or self.bold else '', '<i>' if italic or self.italic else '', text, \
-               '</b>' if bold or self.bold else '', '</i>' if italic or self.italic else '') if text and self.visible else ''
+               '</b>' if bold or self.bold else '', '</i>' if italic or self.italic else '') if text else ''
 
     def getHtmlTextWithTagsOnly(self, text, font=None, size=None, color=None, bold=None, italic=None):
         if font or size or color:
             return '<font %s %s %s>%s%s%s%s%s</font>' % ('face="%s"' % font if font else '', 'size="%d"' % size if size else '',
                    'color="%s"' % color if color else '', '<b>' if bold else '', '<i>' if italic else '', text, \
-                   '</b>' if bold else '', '</i>' if italic else '') if text and self.visible else ''
+                   '</b>' if bold else '', '</i>' if italic else '') if text else ''
         else:
-            return '%s%s%s%s%s' % ('<b>' if bold else '', '<i>' if italic else '', text, '</b>' if bold else '', '</i>' if italic else '') if text and self.visible else ''
+            return '%s%s%s%s%s' % ('<b>' if bold else '', '<i>' if italic else '', text, '</b>' if bold else '', '</i>' if italic else '') if text else ''
 
     def SimpleText(self, text):
-        if self.visible:
-            self.text = text
-            self.ui.as_setTextS(self.container, self.label, [self.begin + self.text + self.end if self.text else self.text])
+        self.text = text
+        self.ui.as_setTextS(self.container, self.label, [self.begin + self.text + self.end if self.text else self.text])
 
     def HtmlText(self, text):
-        if self.visible:
-            self.text = text
-            self.ui.as_setTextS(self.container, self.label, [self.text])
+        self.text = text
+        self.ui.as_setTextS(self.container, self.label, [self.text])
 
     def Visible(self, value):
         self.visible = value
@@ -567,7 +565,7 @@ def showStat(stat, changeID=None):
 
 # Hooks ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-def onLoadedFlash(): 
+def onLoadedFlash():
     g_appLoader.getDefBattleApp().VictoryChancesGUI = FlashTextLabel(GUI_TEXT)
 
 def onVehiclesChanged(statistic, reasone, vID):
@@ -580,13 +578,18 @@ def onVehiclesChanged(statistic, reasone, vID):
         printStat(statistic, False, vID)
 
 def onBattleLoaded(statistic):
-    global CONFIG_FILENAME, LOG_FILENAME, SHOW_INFO, SHOW_ITEMS, PRINT_LOG, PRINT_ITEMS, GUI_TEXT, NEW_BATTLE
+    global CONFIG_FILENAME, LOG_FILENAME, SHOW_INFO, SHOW_ITEMS, KEYS_SHOWHIDEALL, KEYS_TANKSLIST, \
+           PRINT_LOG, PRINT_ITEMS, GUI_TEXT, NEW_BATTLE
     CONFIG_FILENAME = getConfigFileName()
     if CONFIG_FILENAME is not None:
         #Config ------------------------------------------
         config     = json.loads(re.compile('(/\*(.|\n)*?\*/)|((#|//).*?$)', re.I | re.M).sub('', codecs.open(CONFIG_FILENAME, 'r', 'utf-8-sig').read()))
         SHOW_INFO  = config['System']['TeamChances']['GUIStatistics']['Show']
         SHOW_ITEMS = config['System']['TeamChances']['GUIStatistics']['ShowItems']
+        KEYS_SHOWHIDEALL  = config['System']['TeamChances']['Hotkeys']['ShowHideAll']
+        KEYS_SHOWHIDEALL['Key'] = getattr(Keys, KEYS_SHOWHIDEALL['Key'])
+        KEYS_TANKSLIST    = config['System']['TeamChances']['Hotkeys']['TanksList']
+        KEYS_TANKSLIST['Key'] = getattr(Keys, KEYS_TANKSLIST['Key'])
         GUI_TEXT['Name']  = config['System']['TeamChances']['GUIFormat']['Font']['Name']
         GUI_TEXT['Size']  = config['System']['TeamChances']['GUIFormat']['Font']['Size']
         GUI_TEXT['Color'] = config['System']['TeamChances']['GUIFormat']['Font']['Color'].replace('$','#')
@@ -598,14 +601,48 @@ def onBattleLoaded(statistic):
         GUI_TEXT['CompareValuesColor'] = (config['System']['TeamChances']['GUIFormat']['CompareValuesColor']['BestValue'].replace('$','#'), 
                                           config['System']['TeamChances']['GUIFormat']['CompareValuesColor']['WorstValue'].replace('$','#'),
                                           config['System']['TeamChances']['GUIFormat']['Font']['Color'].replace('$','#'))
+        if hasattr(g_appLoader.getDefBattleApp(), 'VictoryChancesGUI'):
+            g_appLoader.getDefBattleApp().VictoryChancesGUI.setPosition(GUI_TEXT['Pos'])
+            g_appLoader.getDefBattleApp().VictoryChancesGUI.Visible(KEYS_SHOWHIDEALL['ShowDefault'])
         PRINT_LOG    = config['System']['TeamChances']['PrintLog']
         PRINT_ITEMS  = config['System']['TeamChances']['LogFormat']['PrintItems']
         LOG_FILENAME = getLogFileName(config['System']['TeamChances']['LogFormat']['Dir'], config['System']['TeamChances']['LogFormat']['Prefix'])
+        #Keys --------------------------------------------
+        if SHOW_INFO:
+            InputHandler.g_instance.onKeyDown += onKeyDown
+        if SHOW_ITEMS['TanksList'] and KEYS_TANKSLIST['ShowKeyDownOnly']:
+            SHOW_ITEMS['TanksList'] = False
+            InputHandler.g_instance.onKeyDown += onShowHideTanksList
+            InputHandler.g_instance.onKeyUp   += onShowHideTanksList
         #Statistic ---------------------------------------
         g_StatisticEvents.OnVehiclesChanged += onVehiclesChanged
         showStat(statistic)
         printStrings(('------------------------- %s -------------------------\n' % datetime.now().strftime('%d.%m.%y %H:%M:%S'), '\nReason: BattleLoading\n\n')) 
         printStat(statistic, True)
+
+def onKeyDown(event):
+    global KEYS_SHOWHIDEALL
+    if event.isKeyDown() and BigWorld.isKeyDown(KEYS_SHOWHIDEALL['Key']):
+        KEYS_SHOWHIDEALL['ShowDefault'] = not KEYS_SHOWHIDEALL['ShowDefault']
+    if hasattr(g_appLoader.getDefBattleApp(), 'VictoryChancesGUI'):
+        g_appLoader.getDefBattleApp().VictoryChancesGUI.Visible(KEYS_SHOWHIDEALL['ShowDefault'])
+    if CONFIG_FILENAME:
+        s = re.sub('"ShowDefault"\s*:\s*(true|false)', '"ShowDefault": ' + str(KEYS_SHOWHIDEALL['ShowDefault']).lower(), codecs.open(CONFIG_FILENAME, 'r', 'utf-8-sig').read())
+        with codecs.open(CONFIG_FILENAME, 'w', 'utf-8-sig') as f:
+            f.write(s)
+
+def onShowHideTanksList(event):
+    global SHOW_ITEMS
+    if (event.isKeyDown() and BigWorld.isKeyDown(KEYS_TANKSLIST['Key']) and not SHOW_ITEMS['TanksList']) or \
+       (event.isKeyUp() and not BigWorld.isKeyDown(KEYS_TANKSLIST['Key']) and SHOW_ITEMS['TanksList']):
+        SHOW_ITEMS['TanksList'] = not SHOW_ITEMS['TanksList']
+        showStat(g_TanksStatistic)
+
+def new__destroyGUI(self):
+    InputHandler.g_instance.onKeyDown -= onKeyDown
+    InputHandler.g_instance.onKeyDown -= onShowHideTanksList
+    InputHandler.g_instance.onKeyUp   -= onShowHideTanksList
+    old__destroyGUI(self)
 
 def new_onBecomeNonPlayer(self):
     try:
@@ -614,12 +651,15 @@ def new_onBecomeNonPlayer(self):
         old_onBecomeNonPlayer(self)
 
 try:
-    from gui.mods.VictoryChances import g_StatisticEvents, UPDATE_REASONE
+    from gui.mods.VictoryChances import g_StatisticEvents, g_TanksStatistic, UPDATE_REASONE
 except:
     print '[%s] Loading mod: Not found "VictoryChances" module, loading stoped!' % __author__
 else:
-    g_flashTextLabels.OnLoadedFlash  += onLoadedFlash
-    g_StatisticEvents.OnBattleLoaded += onBattleLoaded
+    g_flashTextLabels.OnLoadedFlash   += onLoadedFlash
+    g_StatisticEvents.OnBattleLoaded  += onBattleLoaded
+
+    old__destroyGUI = PlayerAvatar._PlayerAvatar__destroyGUI
+    PlayerAvatar._PlayerAvatar__destroyGUI = new__destroyGUI
 
     old_onBecomeNonPlayer = PlayerAvatar.onBecomeNonPlayer
     PlayerAvatar.onBecomeNonPlayer = new_onBecomeNonPlayer
