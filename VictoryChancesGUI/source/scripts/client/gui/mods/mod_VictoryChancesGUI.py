@@ -246,7 +246,7 @@ class BattleFlash(BattleFlashMeta):
         self.as_cursorS(False)
         
     def py_updatePosition(self, container, x, y):
-        g_battleFlash.onUpdatePosition(self.flashObject.name, container, x, y)
+        g_battleFlash.OnUpdatePosition(self.flashObject.name, container, x, y)
         
     def py_printLog(self, text):
         print 'BattleFlash [ %s ] %s' % (str(self.flashObject.name), str(text))
@@ -293,7 +293,7 @@ class _BattleFlash(object):
         g_eventBus.addListener(events.ComponentEvent.COMPONENT_REGISTERED, self.__onComponentRegistered, EVENT_BUS_SCOPE.GLOBAL)
         self.isLoadedFlash = Event.Event()
         self.isDestroyedFlash = Event.Event()
-        self.onUpdatePosition = Event.Event()
+        self.OnUpdatePosition = Event.Event()
         self.Injector = '_Injector'
         self.flashIDs = {}
 
@@ -301,7 +301,7 @@ class _BattleFlash(object):
         g_eventBus.removeListener(events.ComponentEvent.COMPONENT_REGISTERED, self.__onComponentRegistered, EVENT_BUS_SCOPE.GLOBAL)
         self.isLoadedFlash.clear()
         self.isDestroyedFlash.clear()
-        self.onUpdatePosition.clear()
+        self.OnUpdatePosition.clear()
         del self.Injector
         del self.flashIDs       
 
@@ -330,28 +330,28 @@ class FlashTextLabels(object):
     def __init__(self):
         self.id = 'VictoryChancesGUI_Flash'
         self.ui = None
-        self.onLoadedFlash = Event.Event()
-        self.onUpdatePosition = Event.Event()
+        self.OnLoadedFlash = Event.Event()
+        self.OnUpdatePosition = Event.Event()
         g_battleFlash.load(self.id, 'mod_battleflash.swf', FLASH_Z)
         g_battleFlash.isLoadedFlash += self.load
-        g_battleFlash.onUpdatePosition += self.update
+        g_battleFlash.OnUpdatePosition += self.update
         g_battleFlash.isDestroyedFlash += self.destroy
 
     def __del__(self):
         g_battleFlash.isLoadedFlash -= self.load
-        g_battleFlash.onUpdatePosition -= self.update
+        g_battleFlash.OnUpdatePosition -= self.update
         g_battleFlash.isDestroyedFlash -= self.destroy
-        self.onLoadedFlash.clear()
-        self.onUpdatePosition.clear()
+        self.OnLoadedFlash.clear()
+        self.OnUpdatePosition.clear()
 
     def load(self, id, ui):
         if id == self.id:
             self.ui = ui
-            self.onLoadedFlash()
+            self.OnLoadedFlash()
 
     def update(self, id, container, x, y):
         if id == self.id:
-            g_flashTextLabels.onUpdatePosition(container, x, y)
+            g_flashTextLabels.OnUpdatePosition(container, x, y)
 
     def destroy(self, id):
         if id == self.id:
@@ -390,11 +390,11 @@ class FlashTextLabel(object):
         self.section = params['Section'] if 'Section' in params else None
         self.key = params['Key'] if 'Key' in params else None
         if self.config and self.section and self.key:
-            g_flashTextLabels.onUpdatePosition += self.updatePosition
+            g_flashTextLabels.OnUpdatePosition += self.updatePosition
 
     def __del__(self):
         if self.config and self.section and self.key:
-            g_flashTextLabels.onUpdatePosition -= self.updatePosition
+            g_flashTextLabels.OnUpdatePosition -= self.updatePosition
         self.ui = None
 
     def setPosition(self, pos):
@@ -408,7 +408,7 @@ class FlashTextLabel(object):
                 self.x += x
                 self.y += y
                 if not BigWorld.new_ConfigLoader.configWritePositionValue(self.config, self.section, self.key, (self.x, self.y)):
-                    g_flashTextLabels.onUpdatePosition -= self.updatePosition
+                    g_flashTextLabels.OnUpdatePosition -= self.updatePosition
 
     def getSimpleTextWithTags(self, text):
         return self.begin + text + self.end if text and self.visible else ''
@@ -579,7 +579,7 @@ def onVehiclesChanged(statistic, reasone, vID):
             printStrings(('------------------------- %s -------------------------\n' % datetime.now().strftime('%d.%m.%y %H:%M:%S'), '\nReason: HealthChanged\n\n'))
         printStat(statistic, False, vID)
 
-def OnBattleLoaded(statistic):
+def onBattleLoaded(statistic):
     global CONFIG_FILENAME, LOG_FILENAME, SHOW_INFO, SHOW_ITEMS, PRINT_LOG, PRINT_ITEMS, GUI_TEXT, NEW_BATTLE
     CONFIG_FILENAME = getConfigFileName()
     if CONFIG_FILENAME is not None:
@@ -618,8 +618,8 @@ try:
 except:
     print '[%s] Loading mod: Not found "VictoryChances" module, loading stoped!' % __author__
 else:
-    g_flashTextLabels.onLoadedFlash  += onLoadedFlash
-    g_StatisticEvents.OnBattleLoaded += OnBattleLoaded
+    g_flashTextLabels.OnLoadedFlash  += onLoadedFlash
+    g_StatisticEvents.OnBattleLoaded += onBattleLoaded
 
     old_onBecomeNonPlayer = PlayerAvatar.onBecomeNonPlayer
     PlayerAvatar.onBecomeNonPlayer = new_onBecomeNonPlayer
