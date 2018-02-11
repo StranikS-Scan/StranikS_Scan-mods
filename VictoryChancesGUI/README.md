@@ -1,7 +1,7 @@
 ﻿# VictoryChancesGUI
 
 ### Description
-GUI-mod for displaying in a battle the chances of winning (using the *NSM*)
+GUI-mod for displaying in a battle the chances of winning (using the **NSM**)
 
 ## History
 With the history of versions can be found [here][]
