@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V2.0 P2.7 W0.9.22 06.02.2018'
+__version__ = 'V2.1 P2.7 W0.9.22 12.02.2018'
 
 import BigWorld
 from Event import Event
@@ -45,29 +45,34 @@ class _TanksStatistic(object):
     enemyTeamForces    = property(lambda self: self.__enemyTeamForces)
 
     def __init__(self):
-        self.base = {}
-        self.__allyTanksCount        = None
         self.__getAllyTanksCount     = lambda withDead=False: sum([1 for value in self.base.itervalues() if not value['isEnemy'] and (withDead or value['isAlive'])])
-        self.__enemyTanksCount       = None
         self.__getEnemyTanksCount    = lambda withDead=False: sum([1 for value in self.base.itervalues() if value['isEnemy'] and (withDead or value['isAlive'])])
-        self.__allyTeamHP            = None
         self.__getAllyTeamHP         = lambda withDead=False: sum([value['hp'] for value in self.base.itervalues() if not value['isEnemy'] and (withDead or value['isAlive'])])
-        self.__enemyTeamHP           = None
         self.__getEnemyTeamHP        = lambda withDead=False: sum([value['hp'] for value in self.base.itervalues() if value['isEnemy'] and (withDead or value['isAlive'])])
-        self.__allyTeamOneDamage     = None
         self.__getAllyTeamOneDamage  = lambda withDead=False: sum([value['gun']['currentDamage'] for value in self.base.itervalues() if not value['isEnemy'] and (withDead or value['isAlive'])])
-        self.__enemyTeamOneDamage    = None
         self.__getEnemyTeamOneDamage = lambda withDead=False: sum([value['gun']['currentDamage'] for value in self.base.itervalues() if value['isEnemy'] and (withDead or value['isAlive'])])
-        self.__allyTeamDPM           = None
         self.__getAllyTeamDPM        = lambda withDead=False: sum([value['gun']['currentDpm'] for value in self.base.itervalues() if not value['isEnemy'] and (withDead or value['isAlive'])])
-        self.__enemyTeamDPM          = None
         self.__getEnemyTeamDPM       = lambda withDead=False: sum([value['gun']['currentDpm'] for value in self.base.itervalues() if value['isEnemy'] and (withDead or value['isAlive'])])
-        self.__allyTeamForces        = None
         self.__getAllyTeamForces     = lambda withDead=False: sum([value['force'] for value in self.base.itervalues() if not value['isEnemy'] and (withDead or value['isAlive'])])
-        self.__enemyTeamForces       = None
         self.__getEnemyTeamForces    = lambda withDead=False: sum([value['force'] for value in self.base.itervalues() if value['isEnemy'] and (withDead or value['isAlive'])])
-        self.__allyChance            = None
-        self.__enemyChance           = None 
+        self.init()
+
+    def init(self):
+        self.base = {}
+        self.__allyTanksCount        = \
+        self.__enemyTanksCount       = \
+        self.__allyTeamHP            = \
+        self.__enemyTeamHP           = \
+        self.__allyTeamOneDamage     = \
+        self.__enemyTeamOneDamage    = \
+        self.__allyTeamDPM           = \
+        self.__enemyTeamDPM          = \
+        self.__allyTeamForces        = \
+        self.__enemyTeamForces       = \
+        self.__allyChance            = \
+        self.__enemyChance           = \
+        self.__allyChance            = \
+        self.__enemyChance           = None
 
     def update(self, reasone, vID):    
         if self.base:
@@ -211,14 +216,10 @@ def new_CompoundAppearance_prerequisites(self, typeDescriptor, vID, health, isCr
 
 def new__startGUI(self):
     old__startGUI(self)
+    g_TanksStatistic.init()
     for vID in self.arena.vehicles:
         addVehicleInfo(vID, self.arena.vehicles.get(vID))
     g_StatisticEvents.OnBattleLoaded(statistic=g_TanksStatistic)
-
-def new__destroyGUI(self):
-    old__destroyGUI(self)
-    global g_TanksStatistic
-    g_TanksStatistic = _TanksStatistic()
 
 old_onHealthChanged = Vehicle.onHealthChanged
 Vehicle.onHealthChanged = new_onHealthChanged
@@ -234,8 +235,5 @@ CompoundAppearance.prerequisites = new_CompoundAppearance_prerequisites
 
 old__startGUI = PlayerAvatar._PlayerAvatar__startGUI
 PlayerAvatar._PlayerAvatar__startGUI = new__startGUI
-
-old__destroyGUI = PlayerAvatar._PlayerAvatar__destroyGUI
-PlayerAvatar._PlayerAvatar__destroyGUI = new__destroyGUI
 
 print '[%s] Loading mod: VictoryChances %s (http://www.koreanrandom.com)' % (__author__, __version__)

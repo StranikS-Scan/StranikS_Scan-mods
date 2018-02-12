@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V1.0 P2.7 W0.9.22 08.02.2018'
+__version__ = 'V1.1 P2.7 W0.9.22 12.02.2018'
 
 import BigWorld
 from Event import Event
@@ -128,6 +128,12 @@ class _UserToken(object):
     userToken   = property(lambda self: self.__userToken)
 
     def __init__(self):
+        self.__error = TOKEN_ERRORS.OK
+        self.__userToken = ''
+        self.__accountDBID = None
+        self.init()
+
+    def init(self):
         self.__error = TOKEN_ERRORS.OK
         self.__userToken = ''
         self.__accountDBID = self.__getAccountDBID()
@@ -384,12 +390,11 @@ def new__startGUI(self):
             g_XVMConsole.getStats_Async(ids, g_XVMStatisticsEvents.OnStatsBattleLoaded)
 
 def addStatsAccountBecomePlayer():
-    global g_UserToken
     if isPlayerAccount():
         if getattr(BigWorld.player(), 'databaseID', None) is None:
             BigWorld.callback(0.2, addStatsAccountBecomePlayer)
         else:
-            g_UserToken = _UserToken()
+            g_UserToken.init()
             if g_UserToken.errorStatus:
                 print '[%s] XVMStatistics: %s' % (__author__, g_UserToken.errorStatus)
             elif g_XVMStatisticsEvents.OnStatsAccountBecomePlayer._Event__delegates:
