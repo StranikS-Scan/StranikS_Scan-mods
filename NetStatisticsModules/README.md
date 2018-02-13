@@ -86,14 +86,35 @@ Other:
 #Used token
 from gui.mods.XVMStatistics import g_UserToken
 
-  g_UserToken.accountDBID  -> int or None
-  g_UserToken.userToken    -> str or None
+  g_UserToken.accountDBID -> int or None
+  g_UserToken.userToken   -> str or None
 
   #Default value is '', can also take values:
-  #'you need to be logged in once for authorization!'
-  #'requires activation on the XVM-site (https://modxvm.com/)!'
-  #'no connection to the XVM-server!'
-  g_UserToken.errorStatus  -> str
+  #'You need to be logged in once for authorization!'
+  #'Requires activation on the XVM-site (https://modxvm.com/)!'
+  #'No connection to the XVM-server!'
+  g_UserToken.errorStatus -> str
+
+#Tables, autoupdated from the XVM-site and loaded from disk
+from gui.mods.XVMStatistics import g_Tables
+
+  #{'xwgr': [1361, ...], 'xeff': [378, ...], 'xwn8': [56,...], 'xwin': [43.44, ...], 'xwtr': [1409, ...]}
+  g_Tables.xvmscaleTable -> dict or None
+
+  #{'header': {'url': 'https://...', 'source': 'XVM', 'version': '2018-02-12'},
+  # 'data': [{'expDamage': 1079.886, 'expSpot': 0.769, 'IDNum': 55297, 'expWinRate': 52.995, 'expDef': 0.881, 'expFrag': 1.146}, ...]}
+  g_Tables.wn8Table -> dict or None
+
+  #{'62737': {'tf': 1.64, 'x': [342, ...], 'td': 2168, 'ad': 1171, 'af': 0.78}, ...}
+  g_Tables.xteTable -> dict or None
+
+  #{'62737': {'tf': 1.64, 'x': [726, ...], 'td': 2168, 'ad': 1171, 'af': 0.78}, ...}
+  print g_Tables.xtdbTable -> dict or None
+
+  #Default value is '', can also take values:
+  #'One or more tables are not read from disk!'
+  #'One or more tables are not updated from the XVM-site!'
+  g_Tables.errorStatus  -> str
 ```
 ---
 #### Module "VictoryChances"
