@@ -484,3 +484,6 @@ PlayerAvatar._PlayerAvatar__startGUI = new__startGUI
 g_playerEvents.onAccountBecomePlayer += addStatsAccountBecomePlayer
 
 print '[%s] Loading mod: XVMStatistics %s (http://www.koreanrandom.com)' % (__author__, __version__)
+
+if g_Tables.errorStatus:
+    print '[%s] XVMStatistics: %s' % (__author__, g_Tables.errorStatus)
