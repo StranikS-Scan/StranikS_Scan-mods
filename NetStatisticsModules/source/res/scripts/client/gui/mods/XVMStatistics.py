@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V1.2 P2.7 W0.9.22 13.02.2018'
+__version__ = 'V1.3 P2.7 W0.9.22 17.02.2018'
 
 import BigWorld
 from Event import Event
@@ -13,6 +13,7 @@ from helpers import isPlayerAccount
 from os import path, makedirs
 from StringIO import StringIO
 import json, gzip, cPickle, urllib2, threading
+from math import log
 
 # Consts .....................................................................
 
@@ -95,10 +96,15 @@ XVM_STATSREPLAY = XVM_SERVER_API.format(API=API_VERSION, REQ='getStatsReplay/{TO
 # "na":[{"players_online":10146,"server":"303"},{"players_online":1859,"server":"304"}]}
 XVM_ONLINE = XVM_SERVER_API.format(API=API_VERSION, REQ='getOnlineUsersCount/{TOKEN}')
 
+#{'xwgr': [1361, ...], 'xeff': [378, ...], 'xwn8': [56,...], 'xwin': [43.44, ...], 'xwtr': [1409, ...]}
 TABLE_XVMSCALE = XVM_SERVER + '/xvmscales.json.gz'
-TABLE_WN8      = XVM_SERVER + '/wn8-data-exp/json/wn8exp.json.gz'
-TABLE_XTE      = XVM_SERVER + '/xte.json.gz'
-TABLE_XTDB     = XVM_SERVER + '/xtdb.json.gz'
+#{'header': {'url': 'https://...', 'source': 'XVM', 'version': '2018-02-12'},
+# 'data': [{'expDamage': 1079.886, 'expSpot': 0.769, 'IDNum': 55297, 'expWinRate': 52.995, 'expDef': 0.881, 'expFrag': 1.146}, ...]}
+TABLE_WN8 = XVM_SERVER + '/wn8-data-exp/json/wn8exp.json.gz'
+#{'62737': {'tf': 1.64, 'x': [342, ...], 'td': 2168, 'ad': 1171, 'af': 0.78}, ...}
+TABLE_XTE = XVM_SERVER + '/xte.json.gz'
+#{'62737': {'tf': 1.64, 'x': [726, ...], 'td': 2168, 'ad': 1171, 'af': 0.78}, ...}
+TABLE_XTDB = XVM_SERVER + '/xtdb.json.gz'
 
 # Static functions ***********************************************************
 
@@ -123,6 +129,114 @@ def _loadJsonUrl(request):
 
 # Classes ====================================================================
 
+class _Calculator(object):
+    #Converting an absolute value to an index of a universal XVM-Scale
+    #rating = ['wgr', 'eff', 'wn8', 'win', 'wtr', 'xte', 'xtdb', 'sup']
+    def globalRating(self, value, rating):
+        if rating in ['xte', 'xtdb']:
+            return max(0, min(value, 100))
+        elif rating == 'sup':
+            return next((i for i,x in enumerate(g_Tables.supTable) if x > value), 100)
+        elif rating in ['wgr', 'eff', 'wn8', 'win', 'wtr']:
+            if g_Tables.xvmscaleTable:
+                stat = g_Tables.xvmscaleTable.get('x'+rating)
+                if stat:
+                    return next((i for i,x in enumerate(stat) if x > value), 100)
+
+    #Get the value of the specific rating by the XVM-Scale index
+    #rating = ['wgr', 'eff', 'wn8', 'win', 'wtr', 'xte', 'xtdb', 'sup']
+    def specificRating(self, index, rating):
+        index = max(0, min(index, 100))
+        if rating in ['xte', 'xtdb']:
+            return index
+        elif rating == 'sup':
+            return g_Tables.supTable[min(int(index), 100)-1] if index > 0 else 0.0
+        elif rating in ['wgr', 'eff', 'wn8', 'win', 'wtr']:
+            if g_Tables.xvmscaleTable:
+                stat = g_Tables.xvmscaleTable.get('x'+rating)
+                if stat:
+                    return stat[min(int(index), 100)-1] if index > 0 else 0.0
+
+    #Based on https://koreanrandom.com/forum/topic/13434-
+    #params = {'id':int, 'b':int, 'w':int, 'dmg':int, 'frg':int, 'spo':int, 'def':int}
+    def wn8(self, params):
+        if isinstance(params, dict):
+            id     = params.get('id')
+            allBAT = params.get('b', 0)
+            allWIN = params.get('w', 0)
+            allDMG = params.get('dmg', 0)
+            allFRG = params.get('frg', 0)
+            allSPO = params.get('spo', 0)
+            allDEF = params.get('def', 0)
+            if id is not None and allBAT:
+                stat = g_Tables.wn8idsTable.get(id)
+                if stat:
+                    #Weighted values
+                    weiWIN = 100 * float(allWIN) / (allBAT * stat['expWinRate'])
+                    weiDAM =       float(allDMG) / (allBAT * stat['expDamage'])
+                    weiFRG =       float(allFRG) / (allBAT * stat['expFrag'])
+                    weiSPO =       float(allSPO) / (allBAT * stat['expSpot'])
+                    weiDEF =       float(allDEF) / (allBAT * stat['expDef'])
+                    #Normalized values
+                    normWIN = max(0,                    (weiWIN - 0.71) / (1 - 0.71)  )
+                    normDAM = max(0,                    (weiDAM - 0.22) / (1 - 0.22)  )
+                    normFRG = max(0, min(normDAM + 0.2, (weiFRG - 0.12) / (1 - 0.12) ))
+                    normSPO = max(0, min(normDAM + 0.1, (weiSPO - 0.38) / (1 - 0.38) ))
+                    normDEF = max(0, min(normDAM + 0.1, (weiDEF - 0.10) / (1 - 0.10) ))
+                    return 980*normDAM + 210*normDAM*normFRG + 155*normFRG*normSPO + 75*normDEF*normFRG + 145*min(1.8, normWIN)
+
+    #Based on https://koreanrandom.com/forum/topic/23829-
+    #params = {'id':int, 'b':int, 'dmg':int, 'frg':int}
+    def xte(self, params):
+        if isinstance(params, dict):
+            id     = params.get('id')
+            allBAT = params.get('b', 0)
+            allDMG = params.get('dmg', 0)
+            allFRG = params.get('frg', 0)
+            if id is not None and allBAT:
+                stat = g_Tables.xteTable.get(str(id))
+                if stat:
+                    avgDMG = stat['ad']
+                    avgFRG = stat['af']
+                    diffDMG = float(allDMG) / allBAT - avgDMG
+                    diffFRG = float(allFRG) / allFRG - avgFRG
+                    normDMG = max(0, 1 + diffDMG / (stat['td'] - avgDMG) if  diffDMG >= 0 else 1 + diffDMG / (avgDMG - 0.4 * avgDMG))
+                    normFRG = max(0, 1 + diffFRG / (stat['tf'] - avgFRG) if  diffFRG >= 0 else 1 + diffFRG / (avgFRG - 0.4 * avgFRG))
+                    TEFF = 750*normDMG + 250*normFRG
+                    return next((i for i,x in enumerate(stat['x']) if x > TEFF), 100)
+
+    #Based on 'calculateXTDB' in "xvm_main\python\vehinfo.py"-module
+    #params = {'id':int, 'b':int, 'dmg':int}
+    def xtdb(self, params):
+        if isinstance(params, dict):
+            id     = params.get('id')
+            allBAT = params.get('b', 0)
+            allDMG = params.get('dmg', 0)
+            if id is not None and allBAT:
+                stat = g_Tables.xtdbTable.get(str(id))
+                if stat:
+                    avgDMG = float(allDMG) / allBAT
+                    return next((i for i,x in enumerate(stat['x']) if x > avgDMG), 100)
+
+    #Based on https://koreanrandom.com/forum/topic/13386-
+    #params = {'b':int, 'avglvl':float, 'dmg':int, 'frg':int, 'spo':int, 'cap':int, 'def':int}
+    def eff(self, params):
+        if isinstance(params, dict):
+            allBAT  = params.get('b', 0)
+            avgTIER = params.get('avglvl', 0.0)
+            allDMG  = params.get('dmg', 0)
+            allFRG  = params.get('frg', 0)
+            allSPO  = params.get('spo', 0)
+            allCAP  = params.get('cap', 0)
+            allDEF  = params.get('def', 0)
+            if allBAT and avgTIER:
+                avgDMG = float(allDMG) / allBAT
+                avgFRG = float(allFRG) / allBAT
+                avgSPO = float(allSPO) / allBAT
+                avgCAP = float(allCAP) / allBAT
+                avgDEF = float(allDEF) / allBAT
+                return 10*(0.23 + 2.0*avgTIER/100.0)/(avgTIER + 2.0)*avgDMG + 250*avgFRG + 150*avgSPO + 150*log(avgCAP + 1, 1.732) + 150*avgDEF
+
 class TABLE_ERRORS:
     OK          = 0
     NOT_READED  = 1
@@ -133,20 +247,25 @@ class _Tables(object):
     errorStatus   = property(lambda self: self.__getErrorStatus())
     xvmscaleTable = property(lambda self: self.__xvmscale)
     wn8Table      = property(lambda self: self.__wn8)
+    wn8idsTable   = property(lambda self: self.__wn8ids)
     xteTable      = property(lambda self: self.__xte)
     xtdbTable     = property(lambda self: self.__xtdb)
+    supTable      = property(lambda self: self.__sup)
 
     def __init__(self):
         self.__error = TABLE_ERRORS.OK
         self.__xvmscale_filename = CACHE_PATH + 'cache/' + path.basename(TABLE_XVMSCALE) + '.dat'
-        self.__wn8_filename      = CACHE_PATH + 'cache/' + path.basename(TABLE_WN8) + '.dat'
-        self.__xte_filename      = CACHE_PATH + 'cache/' + path.basename(TABLE_XTE) + '.dat'
-        self.__xtdb_filename     = CACHE_PATH + 'cache/' + path.basename(TABLE_XTDB) + '.dat'
+        self.__wn8_filename      = CACHE_PATH + 'cache/' + path.basename(TABLE_WN8)      + '.dat'
+        self.__xte_filename      = CACHE_PATH + 'cache/' + path.basename(TABLE_XTE)      + '.dat'
+        self.__xtdb_filename     = CACHE_PATH + 'cache/' + path.basename(TABLE_XTDB)     + '.dat'
+        #Сorresponds to the XVM 7.4.0 of 06/02/2018
+        self.__sup = ['1.2', '1.5', '1.9', '2.5', '3.1', '3.8', '4.6', '5.5', '6.6', '7.7', '9.0', '10', '12', '14', '15', '17', '19', '21', '24', '26', '28', '31', '33', '36', '38', '41', '43', '46', '48', '51', '53', '56', '58', '60', '63', '65', '67', '69', '71', '73', '74', '76', '78', '79', '80.8', '82.2', '83.6', '84.8', '86.0', '87.1', '88.1', '89.0', '89.9', '90.8', '91.6', '92.3', '92.9', '93.6', '94.1', '94.7', '95.1', '95.6', '96.0', '96.4', '96.7', '97.0', '97.3', '97.6', '97.8', '98.0', '98.2', '98.4', '98.6', '98.7', '98.9', '99.0', '99.1', '99.2', '99.3', '99.37', '99.44', '99.51', '99.57', '99.62', '99.67', '99.71', '99.75', '99.78', '99.81', '99.84', '99.86', '99.88', '99.90', '99.92', '99.93', '99.95', '99.96', '99.97', '99.98', '99.99']
         self.init()
 
     def init(self):
         self.__xvmscale = \
         self.__wn8      = \
+        self.__wn8ids   = \
         self.__xte      = \
         self.__xtdb     = None
         if self.__downloadTable(TABLE_XVMSCALE, self.__xvmscale_filename) and \
@@ -165,6 +284,10 @@ class _Tables(object):
            not isinstance(self.__xte, dict) or \
            not isinstance(self.__xtdb, dict):
             self.__error = TABLE_ERRORS.NOT_READED
+        if self.__wn8:
+            self.__wn8ids = {}
+            for stat in self.__wn8['data']:
+                self.__wn8ids[int(stat['IDNum'])] = dict([x for x in stat.iteritems() if x[0] != 'IDNum'])
 
     def __getTable(self, filename):
         if path.exists(filename):
@@ -440,6 +563,7 @@ class _XVMStatisticsEvents(object):
 #This is "Wargaming.net\WorldOfTanks\xvm\"-dir from the '_UserPrefs' in "xvm_main\python\userprefs.py"-module
 CACHE_PATH = path.dirname(unicode(BigWorld.wg_getPreferencesFilePath(), 'utf-8', errors='ignore')) + '/xvm/' 
 
+g_Calculator          = _Calculator()
 #'token' in "<token>.dat"-file from the cache-folder
 g_UserToken           = _UserToken()
 #"*.json.gz"-files in the cache-folder
