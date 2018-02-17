@@ -86,14 +86,71 @@ Other:
 #Used token
 from gui.mods.XVMStatistics import g_UserToken
 
-  g_UserToken.accountDBID  -> int or None
-  g_UserToken.userToken    -> str or None
+  g_UserToken.accountDBID -> int or None
+  g_UserToken.userToken   -> str or None
 
   #Default value is '', can also take values:
-  #'you need to be logged in once for authorization!'
-  #'requires activation on the XVM-site (https://modxvm.com/)!'
-  #'no connection to the XVM-server!'
-  g_UserToken.errorStatus  -> str
+  #'You need to be logged in once for authorization!'
+  #'Requires activation on the XVM-site (https://modxvm.com/)!'
+  #'No connection to the XVM-server!'
+  g_UserToken.errorStatus -> str
+
+#Tables, autoupdated from the XVM-site and loaded from disk
+from gui.mods.XVMStatistics import g_Tables
+
+  #{'xwgr': [1361, ...], 'xeff': [378, ...], 'xwn8': [56,...], 'xwin': [43.44, ...], 'xwtr': [1409, ...]}
+  g_Tables.xvmscaleTable -> dict or None
+
+  #{'header': {'url': 'https://...', 'source': 'XVM', 'version': '2018-02-12'},
+  # 'data': [{'expDamage': 1079.886, 'expSpot': 0.769, 'IDNum': 55297, 'expWinRate': 52.995, 'expDef': 0.881, 'expFrag': 1.146}, ...]}
+  g_Tables.wn8Table -> dict or None
+
+  #{55297: {'expDamage': 1079.886, 'expSpot': 0.769, 'expWinRate': 52.995, 'expDef': 0.881, 'expFrag': 1.146}, ...}
+  g_Tables.wn8idsTable -> dict or None
+
+  #{'62737': {'tf': 1.64, 'x': [342, ...], 'td': 2168, 'ad': 1171, 'af': 0.78}, ...}
+  g_Tables.xteTable -> dict or None
+
+  #{'62737': {'tf': 1.64, 'x': [726, ...], 'td': 2168, 'ad': 1171, 'af': 0.78}, ...}
+  print g_Tables.xtdbTable -> dict or None
+
+  #['1.2', ..., '99.99']
+  print g_Tables.supTable -> tuple
+
+  #Default value is '', can also take values:
+  #'One or more tables are not read from disk!'
+  #'One or more tables are not updated from the XVM-site!'
+  g_Tables.errorStatus  -> str
+
+#Ratings calculator, operates by default with dict with absolute values
+from gui.mods.XVMStatistics import g_Calculator
+
+  #Converting an absolute value of the rating to an index of a universal XVM-Scale
+  #rating = ['wgr', 'eff', 'wn8', 'win', 'wtr', 'xte', 'xtdb', 'sup']
+  #example globalRating(2301.8,'wn8') -> 74 
+  g_Calculator.globalRating(value=float, rating=str) -> int(0-100) or None
+
+  #Get the absolute value of the specific rating by the XVM-Scale index
+  #rating = ['wgr', 'eff', 'wn8', 'win', 'wtr', 'xte', 'xtdb', 'sup']
+  #example specificRating(74,'wn8') -> 2268.0 
+  g_Calculator.specificRating(index=int, rating=str) -> float or None
+
+  #Calculation of WN8 for one tank with id=vehCD, see https://koreanrandom.com/forum/topic/13434-
+  #params = {'id':int, 'b':int, 'w':int, 'dmg':int, 'frg':int, 'spo':int, 'def':int}
+  g_Calculator.wn8(self, params) -> float or None
+
+  #Calculation of EFF for one tank with avglvl=tier, see https://koreanrandom.com/forum/topic/13386-
+  #params = {'b':int, 'avglvl':float, 'dmg':int, 'frg':int, 'spo':int, 'cap':int, 'def':int}
+  g_Calculator.eff(self, params) -> float or None
+
+  #Calculation of xTE for one tank with id=vehCD, see https://koreanrandom.com/forum/topic/23829-
+  #params = {'id':int, 'b':int, 'dmg':int, 'frg':int}
+  g_Calculator.xte(self, params) -> int or None
+
+  #Calculation of xTDB for one tank with id=vehCD
+  #params = {'id':int, 'b':int, 'dmg':int}
+  g_Calculator.xtdb(self, params) -> int or None
+
 ```
 ---
 #### Module "VictoryChances"
