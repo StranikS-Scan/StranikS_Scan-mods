@@ -122,7 +122,7 @@ from gui.mods.XVMStatistics import g_Tables
   #'One or more tables are not updated from the XVM-site!'
   g_Tables.errorStatus  -> str
 
-#Ratings calculator, operates by default with dict with absolute values
+#Ratings calculator, operates by default dictionary with absolute values
 from gui.mods.XVMStatistics import g_Calculator
 
   #Converting an absolute value of the rating to an index of a universal XVM-Scale
@@ -137,19 +137,19 @@ from gui.mods.XVMStatistics import g_Calculator
 
   #Calculation of WN8 for one tank with id=vehCD, see https://koreanrandom.com/forum/topic/13434-
   #params = {'id':int, 'b':int, 'w':int, 'dmg':int, 'frg':int, 'spo':int, 'def':int}
-  g_Calculator.wn8(self, params) -> float or None
+  g_Calculator.wn8(params=dict) -> float or None
 
   #Calculation of EFF for one tank with avglvl=tier, see https://koreanrandom.com/forum/topic/13386-
   #params = {'b':int, 'avglvl':float, 'dmg':int, 'frg':int, 'spo':int, 'cap':int, 'def':int}
-  g_Calculator.eff(self, params) -> float or None
+  g_Calculator.eff(params=dict) -> float or None
 
   #Calculation of xTE for one tank with id=vehCD, see https://koreanrandom.com/forum/topic/23829-
   #params = {'id':int, 'b':int, 'dmg':int, 'frg':int}
-  g_Calculator.xte(self, params) -> int or None
+  g_Calculator.xte(params=dict) -> int or None
 
   #Calculation of xTDB for one tank with id=vehCD
   #params = {'id':int, 'b':int, 'dmg':int}
-  g_Calculator.xtdb(self, params) -> int or None
+  g_Calculator.xtdb(params=dict) -> int or None
 
 ```
 ---
