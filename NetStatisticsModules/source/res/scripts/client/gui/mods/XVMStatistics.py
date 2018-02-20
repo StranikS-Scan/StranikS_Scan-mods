@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V1.3 P2.7 W0.9.22 17.02.2018'
+__version__ = 'V1.4 P2.7 W0.9.22 20.02.2018'
 
 import BigWorld
 from Event import Event
@@ -130,32 +130,50 @@ def _loadJsonUrl(request):
 # Classes ====================================================================
 
 class _Calculator(object):
-    #Converting an absolute value to an index of a universal XVM-Scale
+    #Converting an absolute value to an index or float value of a universal XVM-Scale
     #rating = ['wgr', 'eff', 'wn8', 'win', 'wtr', 'xte', 'xtdb', 'sup']
-    def globalRating(self, value, rating):
+    def globalRating(self, value, rating, exact=False):
         if rating in ['xte', 'xtdb']:
             return max(0, min(value, 100))
-        elif rating == 'sup':
-            return next((i for i,x in enumerate(g_Tables.supTable) if x > value), 100)
-        elif rating in ['wgr', 'eff', 'wn8', 'win', 'wtr']:
-            if g_Tables.xvmscaleTable:
-                stat = g_Tables.xvmscaleTable.get('x'+rating)
-                if stat:
-                    return next((i for i,x in enumerate(stat) if x > value), 100)
+        else:
+            stat = None
+            if rating == 'sup':
+                stat = g_Tables.supTable
+            elif rating in ['wgr', 'eff', 'wn8', 'win', 'wtr']:
+                if g_Tables.xvmscaleTable:
+                    stat = g_Tables.xvmscaleTable.get('x'+rating)
+            if stat:
+                index = next((i for i,x in enumerate(stat) if x > value), 100)
+                if exact:
+                    if index < 100:
+                        if index == 0:
+                            if value > 0:
+                                return float(value) / stat[0]
+                        else:
+                            return index + (float(value) - stat[index-1]) / (stat[index] - stat[index-1])
+                    return float(index)
+                return index
 
-    #Get the value of the specific rating by the XVM-Scale index
+    #Get the value of the specific rating by the XVM-Scale
     #rating = ['wgr', 'eff', 'wn8', 'win', 'wtr', 'xte', 'xtdb', 'sup']
-    def specificRating(self, index, rating):
-        index = max(0, min(index, 100))
+    def specificRating(self, value, rating): 
         if rating in ['xte', 'xtdb']:
-            return index
-        elif rating == 'sup':
-            return g_Tables.supTable[min(int(index), 100)-1] if index > 0 else 0.0
-        elif rating in ['wgr', 'eff', 'wn8', 'win', 'wtr']:
-            if g_Tables.xvmscaleTable:
-                stat = g_Tables.xvmscaleTable.get('x'+rating)
-                if stat:
-                    return stat[min(int(index), 100)-1] if index > 0 else 0.0
+            return max(0, min(value, 100))
+        else:
+            if rating == 'sup':
+                stat = g_Tables.supTable
+            elif rating in ['wgr', 'eff', 'wn8', 'win', 'wtr']:
+                if g_Tables.xvmscaleTable:
+                    stat = g_Tables.xvmscaleTable.get('x' + rating)
+            if stat:
+                if value > 0:
+                    if int(value) == 0:
+                        return float(value) * stat[0]
+                    indexed_value = stat[min(int(value), 100)-1]
+                    if value < 100 and isinstance(value, float): 
+                        return indexed_value + (float(value) - int(value)) * (stat[int(value)] - stat[int(value)-1])
+                    return indexed_value
+                return 0.0
 
     #Based on https://koreanrandom.com/forum/topic/13434-
     #params = {'id':int, 'b':int, 'w':int, 'dmg':int, 'frg':int, 'spo':int, 'def':int}
@@ -199,11 +217,19 @@ class _Calculator(object):
                     avgDMG = stat['ad']
                     avgFRG = stat['af']
                     diffDMG = float(allDMG) / allBAT - avgDMG
-                    diffFRG = float(allFRG) / allFRG - avgFRG
-                    normDMG = max(0, 1 + diffDMG / (stat['td'] - avgDMG) if  diffDMG >= 0 else 1 + diffDMG / (avgDMG - 0.4 * avgDMG))
-                    normFRG = max(0, 1 + diffFRG / (stat['tf'] - avgFRG) if  diffFRG >= 0 else 1 + diffFRG / (avgFRG - 0.4 * avgFRG))
+                    diffFRG = float(allFRG) / allBAT - avgFRG
+                    normDMG = (1 + diffDMG / (stat['td'] - avgDMG)) if diffDMG >= 0 else (1 + diffDMG / (avgDMG - 0.4 * avgDMG))
+                    normFRG = (1 + diffFRG / (stat['tf'] - avgFRG)) if diffFRG >= 0 else (1 + diffFRG / (avgFRG - 0.4 * avgFRG))
                     TEFF = 750*normDMG + 250*normFRG
-                    return next((i for i,x in enumerate(stat['x']) if x > TEFF), 100)
+                    index = next((i for i,x in enumerate(stat['x']) if x > TEFF), 100)
+                    if index < 100:
+                        if index == 0:
+                            #Minimum is reached when dmg=frg=0, it corresponds normDMG=normFRG=-2/3 and TEFF = -2000/3 = -666.66(6)
+                            if TEFF >= -666:
+                                return (TEFF + 666) / (stat['x'][0] + 666)
+                        else:
+                            return index + (TEFF - stat['x'][index-1]) / (stat['x'][index] - stat['x'][index-1])
+                    return float(index)
 
     #Based on 'calculateXTDB' in "xvm_main\python\vehinfo.py"-module
     #params = {'id':int, 'b':int, 'dmg':int}
@@ -216,7 +242,14 @@ class _Calculator(object):
                 stat = g_Tables.xtdbTable.get(str(id))
                 if stat:
                     avgDMG = float(allDMG) / allBAT
-                    return next((i for i,x in enumerate(stat['x']) if x > avgDMG), 100)
+                    index = next((i for i,x in enumerate(stat['x']) if x > avgDMG), 100)
+                    if index < 100:
+                        if index == 0:
+                            if avgDMG > 0:
+                                return avgDMG / stat['x'][0]
+                        else:
+                            return index + (avgDMG - stat['x'][index-1]) / (stat['x'][index] - stat['x'][index-1])
+                    return float(index)
 
     #Based on https://koreanrandom.com/forum/topic/13386-
     #params = {'b':int, 'avglvl':float, 'dmg':int, 'frg':int, 'spo':int, 'cap':int, 'def':int}
@@ -259,7 +292,7 @@ class _Tables(object):
         self.__xte_filename      = CACHE_PATH + 'cache/' + path.basename(TABLE_XTE)      + '.dat'
         self.__xtdb_filename     = CACHE_PATH + 'cache/' + path.basename(TABLE_XTDB)     + '.dat'
         #Сorresponds to the XVM 7.4.0 of 06/02/2018
-        self.__sup = ['1.2', '1.5', '1.9', '2.5', '3.1', '3.8', '4.6', '5.5', '6.6', '7.7', '9.0', '10', '12', '14', '15', '17', '19', '21', '24', '26', '28', '31', '33', '36', '38', '41', '43', '46', '48', '51', '53', '56', '58', '60', '63', '65', '67', '69', '71', '73', '74', '76', '78', '79', '80.8', '82.2', '83.6', '84.8', '86.0', '87.1', '88.1', '89.0', '89.9', '90.8', '91.6', '92.3', '92.9', '93.6', '94.1', '94.7', '95.1', '95.6', '96.0', '96.4', '96.7', '97.0', '97.3', '97.6', '97.8', '98.0', '98.2', '98.4', '98.6', '98.7', '98.9', '99.0', '99.1', '99.2', '99.3', '99.37', '99.44', '99.51', '99.57', '99.62', '99.67', '99.71', '99.75', '99.78', '99.81', '99.84', '99.86', '99.88', '99.90', '99.92', '99.93', '99.95', '99.96', '99.97', '99.98', '99.99']
+        self.__sup = [1.2, 1.5, 1.9, 2.5, 3.1, 3.8, 4.6, 5.5, 6.6, 7.7, 9.0, 10, 12, 14, 15, 17, 19, 21, 24, 26, 28, 31, 33, 36, 38, 41, 43, 46, 48, 51, 53, 56, 58, 60, 63, 65, 67, 69, 71, 73, 74, 76, 78, 79, 80.8, 82.2, 83.6, 84.8, 86.0, 87.1, 88.1, 89.0, 89.9, 90.8, 91.6, 92.3, 92.9, 93.6, 94.1, 94.7, 95.1, 95.6, 96.0, 96.4, 96.7, 97.0, 97.3, 97.6, 97.8, 98.0, 98.2, 98.4, 98.6, 98.7, 98.9, 99.0, 99.1, 99.2, 99.3, 99.37, 99.44, 99.51, 99.57, 99.62, 99.67, 99.71, 99.75, 99.78, 99.81, 99.84, 99.86, 99.88, 99.90, 99.92, 99.93, 99.95, 99.96, 99.97, 99.98, 99.99]
         self.init()
 
     def init(self):

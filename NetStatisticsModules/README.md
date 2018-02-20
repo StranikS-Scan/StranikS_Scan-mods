@@ -125,15 +125,15 @@ from gui.mods.XVMStatistics import g_Tables
 #Ratings calculator, operates by default dictionary with absolute values
 from gui.mods.XVMStatistics import g_Calculator
 
-  #Converting an absolute value of the rating to an index of a universal XVM-Scale
+  #Converting an absolute value to an index or float value of a universal XVM-Scale
   #rating = ['wgr', 'eff', 'wn8', 'win', 'wtr', 'xte', 'xtdb', 'sup']
-  #example globalRating(2301.8,'wn8') -> 74 
-  g_Calculator.globalRating(value=float, rating=str) -> int(0-100) or None
+  #example globalRating(2209.651,'wn8') -> 72 or 72.423 if exact=True
+  g_Calculator.globalRating(value=float, rating=str, exact=False) -> int or float or None
 
-  #Get the absolute value of the specific rating by the XVM-Scale index
+  #Get the value of the specific rating by the XVM-Scale
   #rating = ['wgr', 'eff', 'wn8', 'win', 'wtr', 'xte', 'xtdb', 'sup']
-  #example specificRating(74,'wn8') -> 2268.0 
-  g_Calculator.specificRating(index=int, rating=str) -> float or None
+  #example specificRating(72.423,'wn8') -> 2209.651
+  g_Calculator.specificRating(value=int or float, rating=str) -> float or None
 
   #Calculation of WN8 for one tank with id=vehCD, see https://koreanrandom.com/forum/topic/13434-
   #params = {'id':int, 'b':int, 'w':int, 'dmg':int, 'frg':int, 'spo':int, 'def':int}
@@ -145,11 +145,11 @@ from gui.mods.XVMStatistics import g_Calculator
 
   #Calculation of xTE for one tank with id=vehCD, see https://koreanrandom.com/forum/topic/23829-
   #params = {'id':int, 'b':int, 'dmg':int, 'frg':int}
-  g_Calculator.xte(params=dict) -> int or None
+  g_Calculator.xte(params=dict) -> float or None
 
   #Calculation of xTDB for one tank with id=vehCD
   #params = {'id':int, 'b':int, 'dmg':int}
-  g_Calculator.xtdb(params=dict) -> int or None
+  g_Calculator.xtdb(params=dict) -> float or None
 
 ```
 ---
