@@ -17,4 +17,4 @@ If there is no package "gambiter.guiflash_xxx.wotmod" in the zip-archive, then d
 
 [here]:./HISTORY.md
 [net.statistics.modules_X.X.X.wotmod]:../NetStatisticsModules/zip
-[VictoryChancesGUI.zip]:./zip
+[VictoryChancesGUI.zip]:./source/configs/VictoryChancesGUI/Example.jpg
