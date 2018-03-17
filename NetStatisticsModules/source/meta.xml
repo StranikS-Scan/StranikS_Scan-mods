@@ -1,5 +1,5 @@
 <root>
-    <id>net.statistics.modules</id>
+    <id>mod.NetStatisticsModules</id>
     <version>1.0.4.065</version>
     <name>NetStatisticsModules(NSM)</name>
     <description>Mathematics and statistics in the game</description>

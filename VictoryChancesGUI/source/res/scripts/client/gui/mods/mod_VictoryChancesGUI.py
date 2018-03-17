@@ -1,9 +1,9 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V2.1 P2.7 W0.9.22 10.02.2018'
+__version__ = 'V2.2 P2.7 W1.0.0 17.03.2018'
 
-import BigWorld, GUI, Event, BattleReplay, Keys
+import BigWorld, Event, BattleReplay, Keys
 from gui.Scaleform.framework.entities.BaseDAAPIComponent import BaseDAAPIComponent
 from gui.Scaleform.framework.entities.View import View
 from gui.Scaleform.framework.managers.loaders import ViewLoadParams
@@ -42,373 +42,67 @@ GUI_TEXT  = {'Name': 'VictoryChancesGUI',
              'Color': '#00EDFF',
              'Pos': (400, -400),
              'Alpha': 0.95,
+             'Shadow': True,
              'LastChangeColor': ('#FC2847','#28FC47'),
              'CompareValuesColor': ('#28FC47','#FC2847'),
              'ToolTip': 'VictoryChancesGUI Panel'}
 
 # Text Flash ===========================================================
 
-class BattleFlashMeta(BaseDAAPIComponent):    
-    
-    def py_printLog(self, text):
-        """
-        :param text : String:
-        :return :
-        """
-        self._printOverrideError('py_printLog')
-    
-    def py_updatePosition(self, container, x, y):
-        """
-        :param container : String:
-        :param x : Number:
-        :param y : Number:
-        :return :
-        """
-        self._printOverrideError('py_updatePosition')
-            
-    def as_setTextS(self, container, element, value):
-        """
-        :param container : String:
-        :param element : String:
-        :param value:
-            text : String:
-        :return :
-        """
-        if self._isDAAPIInited():
-            return self.flashObject.as_setText(container, element, value)
-    
-    def as_setImageS(self, container, element, value):
-        """
-        :param container : String:
-        :param element : String:
-        :param value:
-            image : String:
-        :return :
-        """
-        if self._isDAAPIInited():
-            return self.flashObject.as_setImage(container, element, value)
-            
-    def as_setVisibleS(self, container, element, value):
-        """
-        :param container : String:
-        :param element : String:
-        :param value:
-            visible : Boolean:
-        :return :
-        """
-        if self._isDAAPIInited():
-            return self.flashObject.as_setVisible(container, element, value)
-            
-    def as_setPositionS(self, container, element, value):
-        """
-        :param container : String:
-        :param element : String:
-        :param value:
-            x : Number:
-            y : Number:
-        :return :
-        """
-        if self._isDAAPIInited():
-            return self.flashObject.as_setPosition(container, element, value)
-            
-    def as_setAlphaS(self, container, element, value):
-        """
-        :param container : String:
-        :param element : String:
-        :param value:
-            alpha : Number:
-        :return :
-        """
-        if self._isDAAPIInited():
-            return self.flashObject.as_setAlpha(container, element, value)
-            
-    def as_setRotationS(self, container, element, value):
-        """
-        :param container : String:
-        :param element : String:
-        :param value:
-            rotation : Number:
-        :return :
-        """
-        if self._isDAAPIInited():
-            return self.flashObject.as_setRotation(container, element, value)
-            
-    def as_setSizeS(self, container, element, value):
-        """
-        :param container : String:
-        :param element : String:
-        :param value:
-            width : Number:
-            height : Number:
-        :return :
-        """
-        if self._isDAAPIInited():
-            return self.flashObject.as_setSize(container, element, value)
-            
-    def as_setShadowS(self, container, element, value):
-        """
-        :param container : String:
-        :param element : String:
-        :param value:
-            distance : Number:
-            angle : Number:
-            color : String:
-            alpha : Number:
-            size : Number:
-            strength : Number:
-        :return :
-        """
-        if self._isDAAPIInited():
-            return self.flashObject.as_setShadow(container, element, value)
-            
-    def as_setToolTipS(self, container, element, value):
-        """
-        :param container : String:
-        :param element : String:
-        :param value:
-            tooltip : String:
-        :return :
-        """
-        if self._isDAAPIInited():
-            return self.flashObject.as_setToolTip(container, element, value)
-    
-    def as_screenS(self, width, height):
-        """
-        :param width : Number:
-        :param height : Number:
-        :return :
-        """
-        if self._isDAAPIInited():
-            return self.flashObject.as_screen(width, height)
-
-    def as_cursorS(self, show):
-        """
-        :param show : Boolean:
-        :return :
-        """
-        if self._isDAAPIInited():
-            return self.flashObject.as_cursor(show)
-    
-    def as_visibleS(self, show):
-        """
-        :param show : Boolean:
-        :return :
-        """
-        if self._isDAAPIInited():
-            return self.flashObject.as_visible(show)
-
-class BattleFlash(BattleFlashMeta):
-
-    def __init__(self):
-        super(BattleFlash, self).__init__()
-        self._toggleVisible = {'fullStats': False, 'radialMenu': False}
-
-    def __del__(self):
-        pass
-
-    def _populate(self):
-        super(BattleFlash, self)._populate()
-        g_battleFlash.isLoadedFlash(self.flashObject.name, self)
-        g_eventBus.addListener(events.GameEvent.RADIAL_MENU_CMD, self._toggleRadialMenu, scope=EVENT_BUS_SCOPE.BATTLE)
-        g_eventBus.addListener(events.GameEvent.FULL_STATS, self._toggleFullStats, scope=EVENT_BUS_SCOPE.BATTLE)
-        g_eventBus.addListener(events.GameEvent.SHOW_CURSOR, self._showCursor, EVENT_BUS_SCOPE.GLOBAL)
-        g_eventBus.addListener(events.GameEvent.HIDE_CURSOR, self._hideCursor, EVENT_BUS_SCOPE.GLOBAL)
-        g_guiResetters.add(self._resizeScreen)        
-        self._resizeScreen()
-
-    def _dispose(self):
-        g_battleFlash.isDestroyedFlash(self.flashObject.name)
-        g_eventBus.removeListener(events.GameEvent.RADIAL_MENU_CMD, self._toggleRadialMenu, scope=EVENT_BUS_SCOPE.BATTLE)
-        g_eventBus.removeListener(events.GameEvent.FULL_STATS, self._toggleFullStats, scope=EVENT_BUS_SCOPE.BATTLE)
-        g_eventBus.removeListener(events.GameEvent.SHOW_CURSOR, self._showCursor, EVENT_BUS_SCOPE.BATTLE)
-        g_eventBus.removeListener(events.GameEvent.HIDE_CURSOR, self._hideCursor, EVENT_BUS_SCOPE.BATTLE)
-        g_guiResetters.discard(self._resizeScreen)
-        super(BattleFlash, self)._dispose()
-
-    def _resizeScreen(self):
-        screenWidth, screenHeight = GUI.screenResolution()
-        self.as_screenS(screenWidth, screenHeight)
-    
-    def _toggleRadialMenu(self, event):
-        if BattleReplay.isPlaying(): return
-        self._toggleVisible['radialMenu'] = event.ctx['isDown']
-        self._flashVisible()
-    
-    def _toggleFullStats(self, event):
-        self._toggleVisible['fullStats'] = event.ctx['isDown']
-        self._flashVisible()
-    
-    def _flashVisible(self):
-        isVisible = not self._toggleVisible['fullStats'] and not self._toggleVisible['radialMenu']
-        self.as_visibleS(isVisible)
-    
-    def _showCursor(self, _):
-        self.as_cursorS(True)
-
-    def _hideCursor(self, _):
-        self.as_cursorS(False)
-        
-    def py_updatePosition(self, container, x, y):
-        g_battleFlash.OnUpdatePosition(self.flashObject.name, container, x, y)
-        
-    def py_printLog(self, text):
-        print 'BattleFlash [ %s ] %s' % (str(self.flashObject.name), str(text))
-
-class BattleFlashInjector(View):
-
-    def __init__(self):
-        super(BattleFlashInjector, self).__init__()
-
-    def __del__(self):
-        super(BattleFlashInjector, self).__del__()
-
-    def _populate(self):
-        super(BattleFlashInjector, self)._populate()
-        id = self.getID()
-        idx = self.getIndex(id)
-        self.as_battleInjectS(id, idx)
-        #self.destroy()
-        
-    def _dispose(self):
-        super(BattleFlashInjector, self)._dispose()
-
-    def getID(self):
-        return self.getUniqueName().replace(g_battleFlash.Injector, '')
-    
-    def getIndex(self, id):
-        return g_battleFlash.flashIDs.get(id)
-
-    def py_printLog(self, text):
-        print 'BattleFlash_Injector [ %s ] %s' % (str(self.getUniqueName()), str(text))
-
-    def as_battleInjectS(self, id, idx):
-        if self._isDAAPIInited():
-            return self.flashObject.as_battleInject(id, idx)
-
-class _BattleFlash(object):
-
-    title = 'battleFlash'
-    version = '1.1.4'
-    path = '0.9.15.1'
-    date = '30.08.2016'
-
-    def __init__(self):        
-        g_eventBus.addListener(events.ComponentEvent.COMPONENT_REGISTERED, self.__onComponentRegistered, EVENT_BUS_SCOPE.GLOBAL)
-        self.isLoadedFlash = Event.Event()
-        self.isDestroyedFlash = Event.Event()
-        self.OnUpdatePosition = Event.Event()
-        self.Injector = '_Injector'
-        self.flashIDs = {}
-
-    def __del__(self):
-        g_eventBus.removeListener(events.ComponentEvent.COMPONENT_REGISTERED, self.__onComponentRegistered, EVENT_BUS_SCOPE.GLOBAL)
-        self.isLoadedFlash.clear()
-        self.isDestroyedFlash.clear()
-        self.OnUpdatePosition.clear()
-        del self.Injector
-        del self.flashIDs       
-
-    def load(self, id, swf, idx = None):
-        if id not in self.flashIDs:
-            self.flashIDs[id] = idx           
-            g_entitiesFactories.addSettings(ViewSettings(id + self.Injector, BattleFlashInjector, swf, ViewTypes.WINDOW, None, ScopeTemplates.GLOBAL_SCOPE))
-            g_entitiesFactories.addSettings(ViewSettings(id, BattleFlash, None, ViewTypes.COMPONENT, None, ScopeTemplates.DEFAULT_SCOPE))
-
-    def unload(self, id):
-        if id in self.flashIDs:
-            del self.flashIDs[id]
-            g_entitiesFactories.removeSettings(id + self.Injector)
-            g_entitiesFactories.removeSettings(id)
-
-    def __onComponentRegistered(self, event):
-        if event.alias == BATTLE_VIEW_ALIASES.DAMAGE_PANEL:
-            if g_appLoader.getDefBattleApp():
-                if self.flashIDs:
-                    for id in self.flashIDs:
-                        g_appLoader.getDefBattleApp().loadView(ViewLoadParams(id + self.Injector, None))
-
-g_battleFlash = _BattleFlash()
-
-class FlashTextLabels(object):
-    def __init__(self):
-        self.id = 'VictoryChancesGUI_Flash'
-        self.ui = None
-        self.OnLoadedFlash = Event.Event()
-        self.OnUpdatePosition = Event.Event()
-        g_battleFlash.load(self.id, 'mod_battleflash.swf', FLASH_Z)
-        g_battleFlash.isLoadedFlash += self.load
-        g_battleFlash.OnUpdatePosition += self.update
-        g_battleFlash.isDestroyedFlash += self.destroy
-
-    def __del__(self):
-        g_battleFlash.isLoadedFlash -= self.load
-        g_battleFlash.OnUpdatePosition -= self.update
-        g_battleFlash.isDestroyedFlash -= self.destroy
-        self.OnLoadedFlash.clear()
-        self.OnUpdatePosition.clear()
-
-    def load(self, id, ui):
-        if id == self.id:
-            self.ui = ui
-            self.OnLoadedFlash()
-
-    def update(self, id, container, x, y):
-        if id == self.id:
-            g_flashTextLabels.OnUpdatePosition(container, x, y)
-
-    def destroy(self, id):
-        if id == self.id:
-            self.ui = None
-
-FLASH_Z = 2.461824
-g_flashTextLabels = FlashTextLabels()
+import GUI
 
 class FlashTextLabel(object):
     def __init__(self, params):
         self.text = ''
         self.visible = True
-        self.container = params['Name']
-        self.label = 'TextLabel'
-        self.ui = g_flashTextLabels.ui
-        self.ui.as_setTextS(self.container, self.label, [self.text])
+        self.name = params['Name']
+        options = {'visible': self.visible, 'width': 350, 'height': 600, \
+                   'drag': True, 'multiline': True, 'border': True, 'text': self.text, \
+                   'shadow': {'distance': 0, 'angle': 135, 'color': 0x101010, 'alpha': 0.95, 'blurX': 2, 'blurY': 2, 'strength': 1, 'quality': 1}}
         self.x, self.y = params['Pos'] if 'Pos' in params else (0,0)
         screenWidth, screenHeight = GUI.screenResolution()
-        self.ui.as_setPositionS(self.container, self.label, [screenWidth // 2 + self.x, screenHeight // 2 + self.y])
-#       self.ui.as_setShadowS(self.container, self.label, [0, 135, '#101010', 100, 2, 80]) #distance, angle, color, alpha, size, strength
+        options['x'] = screenWidth // 2 + self.x
+        options['y'] = screenHeight // 2 + self.y
         if 'Alpha' in params:
-            self.ui.as_setAlphaS(self.container, self.label, [min(max(params['Alpha'] * 100, 0), 100)])
+            options['alpha'] = params['Alpha']
         if 'ToolTip' in params:
-            self.ui.as_setToolTipS(self.container, '', [params['ToolTip']])
-        self.ui.as_setVisibleS(self.container, '', [self.visible])
+            options['tooltip'] = params['ToolTip']
+        #---
         self.font = params['Font'] if 'Font' in params else 'Arial'
         self.size = params['Size'] if 'Size' in params else 16
         self.bold = params['Bold'] if 'Bold' in params else False
         self.italic = params['Italic'] if 'Italic' in params else False
         self.color = params['Color'] if 'Color' in params else '#FFFFFF'
-        #---
         self.begin = '<font face="%s" size="%d" color="%s">%s%s' % (self.font, self.size, self.color, '<b>' if self.bold else '', '<i>' if self.italic else '')
         self.end   = '%s%s</font>' % ('</b>' if self.bold else '', '</i>' if self.italic else '')
-        #---
-        g_flashTextLabels.OnUpdatePosition += self.updatePosition
+        #===
+        g_guiFlash.createComponent(self.name, COMPONENT_TYPE.LABEL, options)
+        COMPONENT_EVENT.UPDATED += self.updatePosition
 
     def __del__(self):
-        g_flashTextLabels.OnUpdatePosition -= self.updatePosition
-        self.ui = None
+        COMPONENT_EVENT.UPDATED -= self.updatePosition
+        g_guiFlash.deleteComponent(self.name)
 
-    def setPosition(self, pos):
-        self.x, self.y = pos
+    def setPosition(self, value):
+        self.x, self.y = value
         screenWidth, screenHeight = GUI.screenResolution()
-        self.ui.as_setPositionS(self.container, self.label, [screenWidth // 2 + self.x, screenHeight // 2 + self.y])
+        g_guiFlash.updateComponent(self.name, {'x': screenWidth // 2 + self.x, 'y': screenHeight // 2 + self.y})
 
-    def updatePosition(self, container, x, y):
-        if container == self.container:
-            if x != 0 or y != 0:
-                self.x += x
-                self.y += y
-                if CONFIG_FILENAME:
-                    s = re.sub('"Position"\s*:\s*\[\s*-?\s*\d+\s*,\s*-?\s*\d+\s*\]', '"Position": [%s,%s]' % (self.x, self.y), codecs.open(CONFIG_FILENAME, 'r', 'utf-8-sig').read())
-                    with codecs.open(CONFIG_FILENAME, 'w', 'utf-8-sig') as f:
-                        f.write(s)
+    def updatePosition(self, name, options):
+        if str(name) == self.name:
+            x = options.get('x')
+            y = options.get('y')
+            if x is not None and y is not None:
+                screenWidth, screenHeight = GUI.screenResolution()
+                x -= screenWidth // 2
+                y -= screenHeight // 2
+                if x != self.x or y != self.y:
+                    self.x = x
+                    self.y = y
+                    if CONFIG_FILENAME:
+                        s = re.sub('"Position"\s*:\s*\[\s*-?\s*\d+\s*,\s*-?\s*\d+\s*\]', '"Position": [%d,%d]' % (self.x, self.y), codecs.open(CONFIG_FILENAME, 'r', 'utf-8-sig').read())
+                        with codecs.open(CONFIG_FILENAME, 'w', 'utf-8-sig') as f:
+                            f.write(s)
 
     def getSimpleTextWithTags(self, text):
         return self.begin + text + self.end if text else ''
@@ -428,15 +122,15 @@ class FlashTextLabel(object):
 
     def SimpleText(self, text):
         self.text = text
-        self.ui.as_setTextS(self.container, self.label, [self.begin + self.text + self.end if self.text else self.text])
+        g_guiFlash.updateComponent(self.name, {'text': self.begin + self.text + self.end if self.text else self.text})
 
     def HtmlText(self, text):
         self.text = text
-        self.ui.as_setTextS(self.container, self.label, [self.text])
+        g_guiFlash.updateComponent(self.name, {'text': self.text})
 
     def Visible(self, value):
         self.visible = value
-        self.ui.as_setVisibleS(self.container, '', [self.visible])
+        g_guiFlash.updateComponent(self.name, {'visible': self.visible})
 
 # Classes and functions ===========================================================
 
@@ -444,7 +138,9 @@ def getRoot():
     root = ''
     values = ResMgr.openSection('../paths.xml')['Paths'].values()[0:2]
     for value in values:
-        root = value.asString + '/scripts/client/gui/mods/'
+        if 'res_mods' in value.asString:
+            continue
+        root = value.asString + '/'
         break
     return root
 
@@ -463,7 +159,7 @@ def getLogFileName(dirname, prefix=''):
     return path + prefix + datetime.now().strftime('%d%m%y_%H%M%S_%f')[:17] + '.log'
 
 def getConfigFileName():
-    filename = getRoot() + 'VictoryChancesGUI.cfg'
+    filename = getRoot() + 'configs/VictoryChancesGUI/VictoryChancesGUI.cfg'
     return filename if os.path.exists(filename) else None
 
 def removeAccents(value): 
@@ -565,9 +261,6 @@ def showStat(stat, changeID=None):
 
 # Hooks ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-def onLoadedFlash():
-    g_appLoader.getDefBattleApp().VictoryChancesGUI = FlashTextLabel(GUI_TEXT)
-
 def onVehiclesChanged(statistic, reasone, vID):
     showStat(statistic, vID if reasone != UPDATE_REASONE.VEHICLE_ADDED else None)
     if reasone != UPDATE_REASONE.VEHICLE_ADDED:
@@ -590,23 +283,25 @@ def onBattleLoaded(statistic):
         KEYS_SHOWHIDEALL['Key'] = getattr(Keys, KEYS_SHOWHIDEALL['Key'])
         KEYS_TANKSLIST    = config['System']['TeamChances']['Hotkeys']['TanksList']
         KEYS_TANKSLIST['Key'] = getattr(Keys, KEYS_TANKSLIST['Key'])
-        GUI_TEXT['Name']  = config['System']['TeamChances']['GUIFormat']['Font']['Name']
-        GUI_TEXT['Size']  = config['System']['TeamChances']['GUIFormat']['Font']['Size']
-        GUI_TEXT['Color'] = config['System']['TeamChances']['GUIFormat']['Font']['Color'].replace('$','#')
-        GUI_TEXT['Bold']  = config['System']['TeamChances']['GUIFormat']['Font']['Bold']
-        GUI_TEXT['Pos']   = (config['System']['TeamChances']['GUIFormat']['Position'][0],
-                             config['System']['TeamChances']['GUIFormat']['Position'][1])
+        GUI_TEXT['Name']   = config['System']['TeamChances']['GUIFormat']['Font']['Name']
+        GUI_TEXT['Size']   = config['System']['TeamChances']['GUIFormat']['Font']['Size']
+        GUI_TEXT['Color']  = config['System']['TeamChances']['GUIFormat']['Font']['Color'].replace('$','#')
+        GUI_TEXT['Bold']   = config['System']['TeamChances']['GUIFormat']['Font']['Bold']
+        GUI_TEXT['Alpha']  = config['System']['TeamChances']['GUIFormat']['Font']['Alpha']
+        GUI_TEXT['Shadow'] = config['System']['TeamChances']['GUIFormat']['Font']['Shadow']
+        GUI_TEXT['Pos']    = (config['System']['TeamChances']['GUIFormat']['Position'][0],
+                              config['System']['TeamChances']['GUIFormat']['Position'][1])
         GUI_TEXT['LastChangeColor'] = (config['System']['TeamChances']['GUIFormat']['LastChangeColor']['AllyTeam'].replace('$','#'), 
                                        config['System']['TeamChances']['GUIFormat']['LastChangeColor']['EnemyTeam'].replace('$','#'))
         GUI_TEXT['CompareValuesColor'] = (config['System']['TeamChances']['GUIFormat']['CompareValuesColor']['BestValue'].replace('$','#'), 
                                           config['System']['TeamChances']['GUIFormat']['CompareValuesColor']['WorstValue'].replace('$','#'),
                                           config['System']['TeamChances']['GUIFormat']['Font']['Color'].replace('$','#'))
-        if hasattr(g_appLoader.getDefBattleApp(), 'VictoryChancesGUI'):
-            g_appLoader.getDefBattleApp().VictoryChancesGUI.setPosition(GUI_TEXT['Pos'])
-            g_appLoader.getDefBattleApp().VictoryChancesGUI.Visible(KEYS_SHOWHIDEALL['ShowDefault'])
         PRINT_LOG    = config['System']['TeamChances']['PrintLog']
         PRINT_ITEMS  = config['System']['TeamChances']['LogFormat']['PrintItems']
         LOG_FILENAME = getLogFileName(config['System']['TeamChances']['LogFormat']['Dir'], config['System']['TeamChances']['LogFormat']['Prefix'])
+        #Flash -------------------------------------------
+        g_appLoader.getDefBattleApp().VictoryChancesGUI = VictoryChancesGUI = FlashTextLabel(GUI_TEXT)
+        VictoryChancesGUI.Visible(KEYS_SHOWHIDEALL['ShowDefault'])
         #Keys --------------------------------------------
         if SHOW_INFO:
             InputHandler.g_instance.onKeyDown += onKeyDown
@@ -651,17 +346,22 @@ def new_onBecomeNonPlayer(self):
         old_onBecomeNonPlayer(self)
 
 try:
-    from gui.mods.VictoryChances import g_StatisticEvents, g_TanksStatistic, UPDATE_REASONE
+    from gui.mods.gambiter import g_guiFlash
+    from gui.mods.gambiter.flash import COMPONENT_TYPE, COMPONENT_EVENT
 except:
-    print '[%s] Loading mod: Not found "VictoryChances" module, loading stoped!' % __author__
+    print '[%s] Loading mod: Not found "gambiter.guiflash" module, loading stoped!' % __author__
 else:
-    g_flashTextLabels.OnLoadedFlash   += onLoadedFlash
-    g_StatisticEvents.OnBattleLoaded  += onBattleLoaded
-
-    old__destroyGUI = PlayerAvatar._PlayerAvatar__destroyGUI
-    PlayerAvatar._PlayerAvatar__destroyGUI = new__destroyGUI
-
-    old_onBecomeNonPlayer = PlayerAvatar.onBecomeNonPlayer
-    PlayerAvatar.onBecomeNonPlayer = new_onBecomeNonPlayer
-
-    print '[%s] Loading mod: VictoryChancesGUI %s (http://www.koreanrandom.com)' % (__author__, __version__)
+    try:
+        from gui.mods.VictoryChances import g_StatisticEvents, g_TanksStatistic, UPDATE_REASONE
+    except:
+        print '[%s] Loading mod: Not found "VictoryChances" module, loading stoped!' % __author__
+    else:
+        g_StatisticEvents.OnBattleLoaded  += onBattleLoaded
+    
+        old__destroyGUI = PlayerAvatar._PlayerAvatar__destroyGUI
+        PlayerAvatar._PlayerAvatar__destroyGUI = new__destroyGUI
+    
+        old_onBecomeNonPlayer = PlayerAvatar.onBecomeNonPlayer
+        PlayerAvatar.onBecomeNonPlayer = new_onBecomeNonPlayer
+    
+        print '[%s] Loading mod: VictoryChancesGUI %s (http://www.koreanrandom.com)' % (__author__, __version__)

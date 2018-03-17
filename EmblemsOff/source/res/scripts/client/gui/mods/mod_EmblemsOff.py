@@ -1,9 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 
-__version__ = 'V1.6 P2.7 W0.9.15 25.05.2016'
+__version__ = 'V1.7 P2.7 W1.0.0 17.03.2018'
 __author__  = 'StranikS_Scan'
-
-print '[%s] Loading mod: emblemsOff %s (http://www.koreanrandom.com/forum/topic/21432-)' % (__author__, __version__)
 
 import BigWorld
 from VehicleStickers import ModelStickers, SlotTypes
@@ -54,8 +52,12 @@ def new__init__(self):
                                 remove(name)
                             except:
                                 pass
+                            else:
+                                print '[%s] EmblemsOff: cache of icons was deleted successfully!' % __author__
     finally:
         old__init__(self)
 
 old__init__ = CustomFilesCache.__init__ 
 CustomFilesCache.__init__ = new__init__
+
+print '[%s] Loading mod: emblemsOff %s (http://www.koreanrandom.com/forum/topic/21432-)' % (__author__, __version__)
