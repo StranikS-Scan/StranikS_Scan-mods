@@ -13,8 +13,8 @@ With the history of versions can be found [here][]
 If there is no package "gambiter.guiflash_xxx.wotmod" in the zip-archive, then download its actual version from the [repository](https://github.com/GambitER/GUIFlash/releases).
 
 ### Screenshots
-![ScreenShot](./source/Example.jpg)
+![ScreenShot](./source/configs/VictoryChancesGUI/Example.jpg)
 
 [here]:./HISTORY.md
 [net.statistics.modules_X.X.X.wotmod]:../NetStatisticsModules/zip
-[VictoryChancesGUI.zip]:./source/configs/VictoryChancesGUI/Example.jpg
+[VictoryChancesGUI.zip]:./zip
