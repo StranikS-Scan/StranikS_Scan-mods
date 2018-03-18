@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V2.2 P2.7 W1.0.0 17.03.2018'
+__version__ = 'V2.2.2 P2.7 W1.0.0 19.03.2018'
 
 import BigWorld, Event, BattleReplay, Keys
 from gui.Scaleform.framework.entities.BaseDAAPIComponent import BaseDAAPIComponent
@@ -56,8 +56,7 @@ class FlashTextLabel(object):
         self.text = ''
         self.visible = True
         self.name = params['Name']
-        options = {'visible': self.visible, 'width': 350, 'height': 600, \
-                   'drag': True, 'multiline': True, 'border': True, 'text': self.text, \
+        options = {'visible': self.visible, 'index': 1, 'drag': True, 'multiline': True, 'border': True, 'text': self.text, \
                    'shadow': {'distance': 0, 'angle': 0, 'color': 0x000000, 'alpha': 0, 'blurX': 0, 'blurY': 0, 'strength': 0, 'quality': 0}}
         self.x, self.y = params['Pos'] if 'Pos' in params else (0,0)
         screenWidth, screenHeight = GUI.screenResolution()
@@ -68,7 +67,7 @@ class FlashTextLabel(object):
         if 'ToolTip' in params:
             options['tooltip'] = params['ToolTip']
         if 'Shadow' in params and params['Shadow']:
-            options['shadow'] = {'distance': 0, 'angle': 135, 'color': 0x101010, 'alpha': 0.95, 'blurX': 2, 'blurY': 2, 'strength': 1, 'quality': 1}
+            options['shadow'] = {'distance': 0, 'angle': 135, 'color': 0x101010, 'alpha': 0.60, 'blurX': 1, 'blurY': 1, 'strength': 1, 'quality': 1}
         #---
         self.font = params['Font'] if 'Font' in params else 'Arial'
         self.size = params['Size'] if 'Size' in params else 16
