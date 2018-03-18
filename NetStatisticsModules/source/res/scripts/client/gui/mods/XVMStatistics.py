@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V1.4 P2.7 W0.9.22 20.02.2018'
+__version__ = 'V1.5 P2.7 W0.9.23 18.03.2018'
 
 import BigWorld
 from Event import Event
@@ -425,6 +425,8 @@ class _UserToken(object):
                         return cPickle.loads(f.read())
                 except:
                     pass
+        else:
+            return accountDBID
 
     def __saveAccountDBID(self):
         filename = CACHE_PATH + 'tokens/lastAccountDBID.dat'
