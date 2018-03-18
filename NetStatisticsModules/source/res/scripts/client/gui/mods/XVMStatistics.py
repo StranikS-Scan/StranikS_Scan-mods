@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V1.5 P2.7 W0.9.23 18.03.2018'
+__version__ = 'V1.5 P2.7 W0.9.22 18.03.2018'
 
 import BigWorld
 from Event import Event
