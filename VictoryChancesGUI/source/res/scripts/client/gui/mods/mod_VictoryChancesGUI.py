@@ -58,7 +58,7 @@ class FlashTextLabel(object):
         self.name = params['Name']
         options = {'visible': self.visible, 'width': 350, 'height': 600, \
                    'drag': True, 'multiline': True, 'border': True, 'text': self.text, \
-                   'shadow': {'distance': 0, 'angle': 135, 'color': 0x101010, 'alpha': 0.95, 'blurX': 2, 'blurY': 2, 'strength': 1, 'quality': 1}}
+                   'shadow': {'distance': 0, 'angle': 0, 'color': 0x000000, 'alpha': 0, 'blurX': 0, 'blurY': 0, 'strength': 0, 'quality': 0}}
         self.x, self.y = params['Pos'] if 'Pos' in params else (0,0)
         screenWidth, screenHeight = GUI.screenResolution()
         options['x'] = screenWidth // 2 + self.x
@@ -67,6 +67,8 @@ class FlashTextLabel(object):
             options['alpha'] = params['Alpha']
         if 'ToolTip' in params:
             options['tooltip'] = params['ToolTip']
+        if 'Shadow' in params and params['Shadow']:
+            options['shadow'] = {'distance': 0, 'angle': 135, 'color': 0x101010, 'alpha': 0.95, 'blurX': 2, 'blurY': 2, 'strength': 1, 'quality': 1}
         #---
         self.font = params['Font'] if 'Font' in params else 'Arial'
         self.size = params['Size'] if 'Size' in params else 16
