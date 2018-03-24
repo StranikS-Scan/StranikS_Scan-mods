@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V1.5 P2.7 W0.9.22 18.03.2018'
+__version__ = 'V1.6 P2.7 W1.0.0 24.03.2018'
 
 import BigWorld
 from Event import Event
@@ -633,7 +633,7 @@ def addStatsAccountBecomePlayer():
         else:
             g_UserToken.init()
             if g_UserToken.errorStatus:
-                print '[%s] XVMStatistics: %s' % (__author__, g_UserToken.errorStatus)
+                print '[%s] "xvm_statistics": %s' % (__author__, g_UserToken.errorStatus)
             elif g_XVMStatisticsEvents.OnStatsAccountBecomePlayer._Event__delegates:
                 g_XVMConsole.getStatsByID_Async(g_UserToken.accountDBID, g_XVMStatisticsEvents.OnStatsAccountBecomePlayer)
 
@@ -642,7 +642,7 @@ PlayerAvatar._PlayerAvatar__startGUI = new__startGUI
 
 g_playerEvents.onAccountBecomePlayer += addStatsAccountBecomePlayer
 
-print '[%s] Loading mod: XVMStatistics %s (http://www.koreanrandom.com)' % (__author__, __version__)
+print '[%s] Loading mod: "xvm_statistics" %s (http://www.koreanrandom.com)' % (__author__, __version__)
 
 if g_Tables.errorStatus:
-    print '[%s] XVMStatistics: %s' % (__author__, g_Tables.errorStatus)
+    print '[%s] "xvm_statistics": %s' % (__author__, g_Tables.errorStatus)

@@ -1,6 +1,6 @@
 ﻿# -*- coding: utf-8 -*-
 
-__version__ = 'V1.7 P2.7 W1.0.0 17.03.2018'
+__version__ = 'V1.7.1 P2.7 W1.0.0 24.03.2018'
 __author__  = 'StranikS_Scan'
 
 import BigWorld
@@ -53,11 +53,11 @@ def new__init__(self):
                             except:
                                 pass
                             else:
-                                print '[%s] EmblemsOff: cache of icons was deleted successfully!' % __author__
+                                print '[%s] "emblems_off": cache of icons was deleted successfully!' % __author__
     finally:
         old__init__(self)
 
 old__init__ = CustomFilesCache.__init__ 
 CustomFilesCache.__init__ = new__init__
 
-print '[%s] Loading mod: emblemsOff %s (http://www.koreanrandom.com/forum/topic/21432-)' % (__author__, __version__)
+print '[%s] Loading mod: "emblems_off" %s (http://www.koreanrandom.com/forum/topic/21432-)' % (__author__, __version__)

@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V2.2.2 P2.7 W1.0.0 19.03.2018'
+__version__ = 'V2.2.3 P2.7 W1.0.0 24.03.2018'
 
 import BigWorld, Event, BattleReplay, Keys
 from gui.Scaleform.framework.entities.BaseDAAPIComponent import BaseDAAPIComponent
@@ -56,7 +56,7 @@ class FlashTextLabel(object):
         self.text = ''
         self.visible = True
         self.name = params['Name']
-        options = {'visible': self.visible, 'index': 1, 'drag': True, 'multiline': True, 'border': True, 'text': self.text, \
+        options = {'visible': self.visible, 'index': 2, 'drag': True, 'multiline': True, 'border': True, 'text': self.text, \
                    'shadow': {'distance': 0, 'angle': 0, 'color': 0x000000, 'alpha': 0, 'blurX': 0, 'blurY': 0, 'strength': 0, 'quality': 0}}
         self.x, self.y = params['Pos'] if 'Pos' in params else (0,0)
         screenWidth, screenHeight = GUI.screenResolution()
@@ -350,12 +350,12 @@ try:
     from gui.mods.gambiter import g_guiFlash
     from gui.mods.gambiter.flash import COMPONENT_TYPE, COMPONENT_EVENT
 except:
-    print '[%s] Loading mod: Not found "gambiter.guiflash" module, loading stoped!' % __author__
+    print '[%s] Loading mod: Not found "gambiter.flash" module, loading stoped!' % __author__
 else:
     try:
-        from gui.mods.VictoryChances import g_StatisticEvents, g_TanksStatistic, UPDATE_REASONE
+        from gui.mods.victory_chances import g_StatisticEvents, g_TanksStatistic, UPDATE_REASONE
     except:
-        print '[%s] Loading mod: Not found "VictoryChances" module, loading stoped!' % __author__
+        print '[%s] Loading mod: Not found "victory_chances" module, loading stoped!' % __author__
     else:
         g_StatisticEvents.OnBattleLoaded  += onBattleLoaded
     
@@ -365,4 +365,4 @@ else:
         old_onBecomeNonPlayer = PlayerAvatar.onBecomeNonPlayer
         PlayerAvatar.onBecomeNonPlayer = new_onBecomeNonPlayer
     
-        print '[%s] Loading mod: VictoryChancesGUI %s (http://www.koreanrandom.com)' % (__author__, __version__)
+        print '[%s] Loading mod: "victory_chances_gui" %s (http://www.koreanrandom.com)' % (__author__, __version__)

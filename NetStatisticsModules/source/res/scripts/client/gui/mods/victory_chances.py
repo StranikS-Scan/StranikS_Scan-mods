@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V2.1 P2.7 W0.9.22 12.02.2018'
+__version__ = 'V2.2 P2.7 W1.0.0 24.03.2018'
 
 import BigWorld
 from Event import Event
@@ -236,4 +236,4 @@ CompoundAppearance.prerequisites = new_CompoundAppearance_prerequisites
 old__startGUI = PlayerAvatar._PlayerAvatar__startGUI
 PlayerAvatar._PlayerAvatar__startGUI = new__startGUI
 
-print '[%s] Loading mod: VictoryChances %s (http://www.koreanrandom.com)' % (__author__, __version__)
+print '[%s] Loading mod: "victory_chances" %s (http://www.koreanrandom.com)' % (__author__, __version__)

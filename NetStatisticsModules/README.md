@@ -1,8 +1,8 @@
 ﻿# NetStatisticsModules(NSM)
 
 ## List of modules:
-* "XVMStatistics" - getting statistics from the XVM-server
-* "VictoryChances" - calculation of chances for victory in battle
+* "xvm_statistics" - getting statistics from the XVM-server
+* "victory_chances" - calculation of chances for victory in battle
 
 ## Install
 Put the zip-file to a folder "World_of_Tanks\mods\X.X.X\"
@@ -11,10 +11,10 @@ Put the zip-file to a folder "World_of_Tanks\mods\X.X.X\"
 With the history of versions can be found [here][]
 
 ## Terms of Use
-#### Module "XVMStatistics"
+#### Module "xvm_statistics"
 Events access:
 ```
-from gui.mods.XVMStatistics import g_XVMStatisticsEvents
+from gui.mods.xvm_statistics import g_XVMStatisticsEvents
 
   #Returns the statistics of the player during authorization in the game client,
   #if there is no data on the server or there is no connection or there is no token, it returns None
@@ -53,7 +53,7 @@ from gui.mods.XVMStatistics import g_XVMStatisticsEvents
 Console access:
 ```
 #If there is no connection to the server or there is no token, then it returns None
-from gui.mods.XVMStatistics import g_XVMConsole
+from gui.mods.xvm_statistics import g_XVMConsole
 
   #Returns reports from the server for the _Async requests, if no onAsyncReport is specified
   g_XVMConsole.OnAsyncReports(-> dict or None)
@@ -84,7 +84,7 @@ from gui.mods.XVMStatistics import g_XVMConsole
 Other:
 ```
 #Used token
-from gui.mods.XVMStatistics import g_UserToken
+from gui.mods.xvm_statistics import g_UserToken
 
   g_UserToken.accountDBID -> int or None
   g_UserToken.userToken   -> str or None
@@ -96,7 +96,7 @@ from gui.mods.XVMStatistics import g_UserToken
   g_UserToken.errorStatus -> str
 
 #Tables, autoupdated from the XVM-site and loaded from disk
-from gui.mods.XVMStatistics import g_Tables
+from gui.mods.xvm_statistics import g_Tables
 
   #{'xwgr': [1361, ...], 'xeff': [378, ...], 'xwn8': [56,...], 'xwin': [43.44, ...], 'xwtr': [1409, ...]}
   g_Tables.xvmscaleTable -> dict or None
@@ -123,7 +123,7 @@ from gui.mods.XVMStatistics import g_Tables
   g_Tables.errorStatus  -> str
 
 #Ratings calculator, operates by default dictionary with absolute values
-from gui.mods.XVMStatistics import g_Calculator
+from gui.mods.xvm_statistics import g_Calculator
 
   #Converting an absolute value to an index or float value of a universal XVM-Scale
   #rating = ['wgr', 'eff', 'wn8', 'win', 'wtr', 'xte', 'xtdb', 'sup']
@@ -153,11 +153,11 @@ from gui.mods.XVMStatistics import g_Calculator
 
 ```
 ---
-#### Module "VictoryChances"
+#### Module "victory_chances"
 Events access:
 ```
 #Set of events to track changes in the tanks composition and the chances of winning
-from gui.mods.VictoryChances import g_StatisticEvents
+from gui.mods.victory_chances import g_StatisticEvents
 
   #It works when the caching of users and tanks information is completed when the battle is loaded
   #Returns a pointer to g_TanksStatistic
@@ -182,7 +182,7 @@ from gui.mods.VictoryChances import g_StatisticEvents
 Other:
 ```
 #Parameters of tanks and players statistics
-from gui.mods.VictoryChances import g_TanksStatistic
+from gui.mods.victory_chances import g_TanksStatistic
 
   g_TanksStatistic.base               -> dict
   g_TanksStatistic.allyChance         -> int or None
@@ -199,7 +199,7 @@ from gui.mods.VictoryChances import g_TanksStatistic
   g_TanksStatistic.enemyTeamForces    -> int or None
     
 #Types of reasons in OnVehiclesChanged event
-from gui.mods.VictoryChances import UPDATE_REASONE
+from gui.mods.victory_chances import UPDATE_REASONE
 
   UPDATE_REASONE.VEHICLE_ADDED  -> int
   UPDATE_REASONE.VEHICLE_DEATH  -> int
