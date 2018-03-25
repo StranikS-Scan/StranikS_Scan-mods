@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V2.2.3 P2.7 W1.0.0 24.03.2018'
+__version__ = 'V2.2.4 P2.7 W1.0.0 25.03.2018'
 
 import BigWorld, Event, BattleReplay, Keys
 from gui.Scaleform.framework.entities.BaseDAAPIComponent import BaseDAAPIComponent
@@ -135,32 +135,25 @@ class FlashTextLabel(object):
 
 # Classes and functions ===========================================================
 
-def getRoot():
-    root = ''
-    values = ResMgr.openSection('../paths.xml')['Paths'].values()[0:2]
-    for value in values:
-        if 'res_mods' in value.asString:
-            continue
-        root = value.asString + '/'
-        break
-    return root
+def getRootPath():
+    return ResMgr.openSection('../paths.xml')['Paths'].values()[0].asString.replace('res_mods', 'mods') + '/'
 
 def getLogFileName(dirname, prefix=''):
-    root = getRoot()
+    rootPath = getRootPath()
     if dirname:
         dirname = dirname.replace('\\', '/')
         if dirname[-1] != '/':
             dirname += '/'
-    path = (root if not (':' in dirname) else '') + dirname
+    path = (rootPath if not (':' in dirname) else '') + dirname
     if not os.path.exists(path):
         try:
             os.makedirs(path)
         except:
-            path = root
+            path = rootPath
     return path + prefix + datetime.now().strftime('%d%m%y_%H%M%S_%f')[:17] + '.log'
 
 def getConfigFileName():
-    filename = getRoot() + 'configs/VictoryChancesGUI/VictoryChancesGUI.cfg'
+    filename = getRootPath() + 'configs/VictoryChancesGUI/VictoryChancesGUI.cfg'
     return filename if os.path.exists(filename) else None
 
 def removeAccents(value): 
