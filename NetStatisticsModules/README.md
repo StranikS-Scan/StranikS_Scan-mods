@@ -5,7 +5,7 @@
 * "victory_chances" - calculation of chances for victory in battle
 
 ## Install
-Put the zip-file to a folder "World_of_Tanks\mods\X.X.X\"
+Put the wotmod-file to a folder "World_of_Tanks\mods\X.X.X\"
 
 ## History
 With the history of versions can be found [here][]

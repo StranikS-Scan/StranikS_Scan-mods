@@ -1,5 +1,5 @@
 ﻿# StranikS_Scan-mods
-Various author's mods for the WorldfOfTanks.
+Various author's mods for the **WorldfOfTanks**.
 
 ## Mods description:
 * [NetStatisticsModules(NSM)][] - Mathematics and statistics in the game, a set of modules
