@@ -1,0 +1,6 @@
+#-------------------- Zip-Packer parameters --------------------
+#{VERSION} - zip-packer replaces the arg with the version-tag from meta.xml
+
+exe  = "C:\Program Files\7-Zip\7z.exe"
+arg  = "a -tzip -mx0 mod.SimpleLogger_{VERSION}.wotmod meta.xml github.txt res\ -xr!*.py"
+meta = "meta.xml"

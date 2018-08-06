@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V2.2.4 P2.7 W1.0.0 25.03.2018'
+__version__ = 'V2.2.5 P2.7 W1.0.0 25.03.2018'
 
 import BigWorld, Event, BattleReplay, Keys
 from gui.Scaleform.framework.entities.BaseDAAPIComponent import BaseDAAPIComponent

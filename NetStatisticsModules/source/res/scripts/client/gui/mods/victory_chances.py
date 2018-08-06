@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V2.2 P2.7 W1.0.0 24.03.2018'
+__version__ = 'V2.2 P2.7 W1.0.1 06.08.2018'
 
 import BigWorld
 from Event import Event
@@ -104,9 +104,9 @@ class _TanksStatistic(object):
             self.__enemyTeamForces = self.__getEnemyTeamForces()
             allForces = self.__allyTeamForces + self.__enemyTeamForces
             for value in self.base.itervalues():
-                value['contribution'] = 100 * value['force'] / allForces if value['isAlive'] else 0
-            self.__allyChance  = 100 * self.__allyTeamForces  / allForces
-            self.__enemyChance = 100 * self.__enemyTeamForces / allForces
+                value['contribution'] = 100 * value['force'] / allForces if allForces != 0 and value['isAlive'] else 0
+            self.__allyChance  = 100 * self.__allyTeamForces  / allForces if allForces != 0 else 0
+            self.__enemyChance = 100 * self.__enemyTeamForces / allForces if allForces != 0 else 0
             #Events -----------------------------------------------------------
             g_StatisticEvents.OnVehiclesChanged(statistic=self, reasone=reasone, vID=vID)
             if reasone <= UPDATE_REASONE.VEHICLE_DEATH:
@@ -163,6 +163,8 @@ def addVehicleInfo(vID, vInfo):
         #Main info -----------------------------------------------------------
         vType = vInfo['vehicleType']
         g_TanksStatistic.base[vID] = tank = {}
+        tank['accountDBID'] = vInfo['accountDBID']
+        tank['userName'] = vInfo['name']
         tank['name'] = vType.type.shortUserString.replace(' ','')
         tank['type'] = {}
         tank['type']['tag'] = set(vehicles.VEHICLE_CLASS_TAGS & vType.type.tags).pop()

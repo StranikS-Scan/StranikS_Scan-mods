@@ -1,7 +1,7 @@
 ﻿# EmblemsOff 
 
 ## Description
-Mode disables loading clan emblems that are displayed on tanks
+Mod disables loading clan emblems that are displayed on tanks
 
 ## Install
 Put the wotmod-file to a folder "World_of_Tanks\mods\X.X.X\"
