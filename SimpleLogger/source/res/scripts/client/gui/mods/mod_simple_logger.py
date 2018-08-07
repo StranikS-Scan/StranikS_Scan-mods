@@ -162,8 +162,11 @@ def printStrings(filename, value):
 
 # CSV -----------------------------------------------------------------
 
-BATTLES_HEADER = ('"arenaUniqueID"','"arenaGuiType"','"arenaTypeID"','"arenaBonusType"','"arenaKind"','"battleLevel"','"allyTanksCount"','"enemyTanksCount','"allyTeamHP"','"enemyTeamHP"','"allyTanksAvgLevel"','"enemyTanksAvgLevel"') 
-PLAYERS_HEADER = ('"arenaUniqueID"','"accountDBID"','"userName"','"isEnemy"','"vehicleTypeTag"','"vehicleTypeNFKD"','"level"','"hp"','"xvm_battles"','"xvm_wins"','"xvm_experience"','"xvm_damage"','"xvm_frags"','"xvm_spot"','"xvm_capture"','"xmv_defense"','"xvm_accuracy"','"xvm_survived"','"xvm_wn8"','"xvm_wgr"','"xvm_wtr"') 
+BATTLES_HEADER = ('"arenaUniqueID"','"arenaGuiType"','"arenaTypeID"','"arenaBonusType"','"arenaKind"','"battleLevel"') + \
+                 ('"allyTanksCount"','"enemyTanksCount','"allyTeamHP"','"enemyTeamHP"','"allyTanksAvgLevel"','"enemyTanksAvgLevel"') 
+PLAYERS_HEADER = ('"arenaUniqueID"','"accountDBID"','"userName"','"isEnemy"','"vehicleTypeTag"','"vehicleTypeNFKD"','"level"','"hp"') + \
+                 ('"xvm_battles"','"xvm_wins"','"xvm_experience"','"xvm_damage"','"xvm_frags"','"xvm_spot"','"xvm_capture"','"xmv_defense"','"xvm_accuracy"','"xvm_survived"','"xvm_wn8"','"xvm_wgr"','"xvm_wtr"') + \
+                 ('',)
 EVENTS_HEADER = ('"arenaUniqueID"','') 
 
 # Hooks ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -177,6 +180,7 @@ def onBattleLoaded(statistic):
                       '"%s(%d)"' % (BONUS_TYPE_NAMES[player.arenaBonusType], player.arenaBonusType),
                       '"%s(%d)"' % (SeasonTypeNames[SeasonType.fromArenaKind(player.arenaExtraData['arenaKind'])], player.arenaExtraData['arenaKind']),
                       '%d' % player.arenaExtraData['battleLevel'],
+                      #--------------
                       '%d' % statistic.allyTanksCount,
                       '%d' % statistic.enemyTanksCount,
                       '%d' % statistic.allyTeamHP,
@@ -190,7 +194,7 @@ def onXVMBattleLoaded(statistic):
         statistic = {x['_id']:x for x in statistic['players']} if statistic and statistic.has_key('players') else {}
         for vType in g_TanksStatistic.base.values():
             playerInfo = ['%d' % BigWorld.player().arenaUniqueID,
-                          '%d' % vType['accountDBID'],
+                          '%d' % vType['accountDBID'] if vType['accountDBID'] else '',
                           '"%s"' % vType['userName'],
                           '%d' % vType['isEnemy'],
                           '"%s"' % tankTypeAbb(vType['type']['tag']),
@@ -200,19 +204,19 @@ def onXVMBattleLoaded(statistic):
             playerStat = []
             pStat = statistic.get(vType['accountDBID'])
             if pStat:
-                playerStat = ['%d' % pStat['b'],
-                              '%d' % pStat['w'],
-                              '%d' % pStat['xp'],
-                              '%d' % pStat['dmg'],
-                              '%d' % pStat['frg'],
-                              '%d' % pStat['spo'],
-                              '%d' % pStat['cap'],
-                              '%d' % pStat['def'],
-                              ('%.2f' % pStat['hip']).replace('.',','),
-                              '%d' % pStat['srv'],
-                              '%d' % pStat['wn8'],
-                              '%d' % pStat['wgr'],
-                              '%d' % pStat['wtr']]
+                playerStat = ['%d' % pStat['b'] if pStat['b'] else '',
+                              '%d' % pStat['w'] if pStat['w'] else '',
+                              '%d' % pStat['xp'] if pStat['xp'] else '',
+                              '%d' % pStat['dmg'] if pStat['dmg'] else '',
+                              '%d' % pStat['frg'] if pStat['frg'] else '',
+                              '%d' % pStat['spo'] if pStat['spo'] else '',
+                              '%d' % pStat['cap'] if pStat['cap'] else '',
+                              '%d' % pStat['def'] if pStat['def'] else '',
+                              ('%.2f' % pStat['hip']).replace('.',',') if pStat['hip'] else '',
+                              '%d' % pStat['srv'] if pStat['srv'] else '',
+                              '%d' % pStat['wn8'] if pStat['wn8'] else '',
+                              '%d' % pStat['wgr'] if pStat['wgr'] else '',
+                              '%d' % pStat['wtr'] if pStat['wtr'] else '']
             printStrings(LOG_PLAYERS_FILENAME, playerInfo + playerStat)
 
 try:
