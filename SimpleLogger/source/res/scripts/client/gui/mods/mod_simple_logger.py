@@ -1,21 +1,25 @@
 ﻿# -*- coding: utf-8 -*-
 
-__version__ = 'V1.0.0 P2.7 W1.0.0 06.08.2018'
+__version__ = 'V1.0.2 P2.7 W1.0.0 08.08.2018'
 __author__  = 'StranikS_Scan'
 
 import BigWorld, Event, BattleReplay
 from Avatar import PlayerAvatar
-from constants import ARENA_GUI_TYPE_LABEL, ARENA_BONUS_TYPE
+from Vehicle import Vehicle
+from items import vehicles
+from constants import ARENA_GUI_TYPE_LABEL, ARENA_BONUS_TYPE, VEHICLE_HIT_EFFECT
 from gui.shared.utils.functions import getArenaGeomentryName
 from items.components.c11n_constants import SeasonType, SeasonTypeNames
+from VehicleEffects import DamageFromShotDecoder
 
-import re 
+import re
 import ResMgr, os, codecs, json
 import unicodedata
+from datetime import datetime
 
 # Consts and Vars ..........................................................................
 
-CSV_VERSION = '1.0'
+CSV_VERSION = '1.1'
 
 CONFIG_FILENAME = None
 LOG_BATTLES = LOG_PLAYERS = LOG_EVENTS = False
@@ -56,9 +60,8 @@ class _OverrideLib(object):
 
     def __logTrace(self, func, debug):
         if debug:
-            debug.write('Error in %s' % func.__name__)
             import traceback
-            debug.write(traceback.format_exc()) #Test
+            print traceback.format_exc() #Test
 
     def __eventHandler(self, func, debug, prepend, e, m, *a, **k):
         try:
@@ -92,7 +95,7 @@ class _OverrideLib(object):
         else:
             setattr(cls, method, new_method) 
 
-    def __registerEvent(self, handler, cls, method, debug=None, prepend=False):
+    def __registerEvent(self, handler, cls, method, debug=False, prepend=False):
         evt = '__event_%i_%s' % (1 if prepend else 0, method)
         if hasattr(cls, evt):
             e = getattr(cls, evt)
@@ -107,23 +110,23 @@ class _OverrideLib(object):
             setattr(cls, method, l)
         e += handler
 
-    def __overrideMethod(self, handler, cls, method, debug=None):
+    def __overrideMethod(self, handler, cls, method, debug=False):
         orig = getattr(cls, method)
         new_method = lambda *a, **k: self.__overrideHandler(handler, orig, debug, *a, **k)
         new_method.__name__ = method
         self.__override(cls, method, new_method)
 
-    def __overrideStaticMethod(self, handler, cls, method, debug=None):
+    def __overrideStaticMethod(self, handler, cls, method, debug=False):
         orig = getattr(cls, method)
         new_method = staticmethod(lambda *a, **k: self.__overrideHandler(handler, orig, debug, *a, **k))
         self.__override(cls, method, new_method)
 
-    def __overrideClassMethod(self, handler, cls, method, debug=None):
+    def __overrideClassMethod(self, handler, cls, method, debug=False):
         orig = getattr(cls, method)
         new_method = classmethod(lambda *a, **k: self.__overrideHandler(handler, orig, debug, *a, **k))
         self.__override(cls, method, new_method)
 
-BONUS_TYPE_NAMES = {getattr(ARENA_BONUS_TYPE, k):k for k in dir(ARENA_BONUS_TYPE) if not k.startswith('_') and isinstance(getattr(ARENA_BONUS_TYPE, k), int)}
+g_overrideLib = _OverrideLib() 
 
 def getRootPath():
     return ResMgr.openSection('../paths.xml')['Paths'].values()[0].asString.replace('res_mods', 'mods') + '/'
@@ -160,25 +163,85 @@ def printStrings(filename, value):
             else:
                 file.write(value + '\n')
 
+BONUS_TYPE_NAMES = {getattr(ARENA_BONUS_TYPE, k):k for k in dir(ARENA_BONUS_TYPE)[::-1] if not k.startswith('_') and isinstance(getattr(ARENA_BONUS_TYPE, k), int)}
+VEHICLE_HIT_EFFECT_NAMES = {getattr(VEHICLE_HIT_EFFECT, k):k for k in dir(VEHICLE_HIT_EFFECT)[::-1] if not k.startswith('_') and isinstance(getattr(VEHICLE_HIT_EFFECT, k), int)}
+
 # CSV -----------------------------------------------------------------
 
-BATTLES_HEADER = ('"arenaUniqueID"','"arenaGuiType"','"arenaTypeID"','"arenaBonusType"','"arenaKind"','"battleLevel"') + \
-                 ('"allyTanksCount"','"enemyTanksCount','"allyTeamHP"','"enemyTeamHP"','"allyTanksAvgLevel"','"enemyTanksAvgLevel"') 
+BATTLES_HEADER = ('"arenaUniqueID"','"dateTime"','"serverName"','"arenaGuiType"','"arenaTypeID"','"arenaBonusType"','"arenaKind"','"battleLevel"') + \
+                 ('"allyTanksCount"','"enemyTanksCount"','"allyTeamHP"','"enemyTeamHP"','"allyTanksAvgLevel"','"enemyTanksAvgLevel"')
 PLAYERS_HEADER = ('"arenaUniqueID"','"accountDBID"','"userName"','"isEnemy"','"vehicleTypeTag"','"vehicleTypeNFKD"','"level"','"hp"') + \
-                 ('"xvm_battles"','"xvm_wins"','"xvm_experience"','"xvm_damage"','"xvm_frags"','"xvm_spot"','"xvm_capture"','"xmv_defense"','"xvm_accuracy"','"xvm_survived"','"xvm_wn8"','"xvm_wgr"','"xvm_wtr"') + \
-                 ('',)
-EVENTS_HEADER = ('"arenaUniqueID"','') 
+                 ('"xvm_battles"','"xvm_wins"','"xvm_experience"','"xvm_damage"','"xvm_frags"','"xvm_spot"','"xvm_capture"','"xmv_defense"','"xvm_accuracy"','"xvm_survived"','"xvm_wn8"','"xvm_wgr"','"xvm_wtr"') 
+EVENTS_HEADER =  ('"arenaUniqueID"','"remainingTime"','"event"','"userDBID"','"attakerDBID"','"data"')
 
 # Hooks ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+@g_overrideLib.registerEvent(PlayerAvatar, 'showTracer', True)
+def new_showTracer(self, shooterID, shotID, isRicochet, effectsIndex, *a, **k):
+    if LOG_EVENTS:
+        g_replayCtrl = BattleReplay.g_replayCtrl
+        shellName = ''
+        for shot in self.arena.vehicles[shooterID]['vehicleType'].gun.shots:
+            if effectsIndex == shot.shell.effectsIndex:
+                shellName = shot.shell.name
+        eventInfo = ('%s' % self.arenaUniqueID,
+                     ('%.3f' % g_replayCtrl.getArenaLength() if g_replayCtrl.isPlaying else self.arena.periodEndTime - BigWorld.serverTime()).replace('.',','),
+                     '"PlayerAvatar.showTracer"',
+                     '%s' % self.arena.vehicles[shooterID]['accountDBID'],
+                     '',
+                     json.dumps({'isRicochet':isRicochet, 'effectsIndex':effectsIndex, 'shellName':shellName}))
+        printStrings(LOG_EVENTS_FILENAME, eventInfo)
+
+@g_overrideLib.registerEvent(Vehicle, 'showDamageFromShot', True)
+def new_showDamageFromShot(self, attackerID, points, effectsIndex, damageFactor, *a, **k):
+    if LOG_EVENTS:
+        player = BigWorld.player()
+        g_replayCtrl = BattleReplay.g_replayCtrl
+        shellName = ''
+        for shot in player.arena.vehicles[attackerID]['vehicleType'].gun.shots:
+            if effectsIndex == shot.shell.effectsIndex:
+                shellName = shot.shell.name
+        effectsDescr = vehicles.g_cache.shotEffects[effectsIndex]
+        maxHitEffectCode, decodedPoints, maxDamagedComponent = DamageFromShotDecoder.decodeHitPoints(points, self.appearance.collisions)
+        hasPiercedHit = DamageFromShotDecoder.hasDamaged(maxHitEffectCode)
+        eventInfo = ('%s' % player.arenaUniqueID,
+                     ('%.3f' % g_replayCtrl.getArenaLength() if g_replayCtrl.isPlaying else player.arena.periodEndTime - BigWorld.serverTime()).replace('.',','),
+                     '"Vehicle.showDamageFromShot"',
+                     '%s' % player.arena.vehicles[self.id]['accountDBID'],
+                     '%s' % player.arena.vehicles[attackerID]['accountDBID'],
+                     json.dumps({'effectsIndex':effectsIndex, 'shellName':shellName, 'damageFactor':damageFactor, \
+                                 'maxHitEffectCode':VEHICLE_HIT_EFFECT_NAMES.get(maxHitEffectCode), 'maxDamagedComponent':maxDamagedComponent, \
+                                 'hasPiercedHit':hasPiercedHit}))
+        printStrings(LOG_EVENTS_FILENAME, eventInfo)
+
+@g_overrideLib.registerEvent(Vehicle, 'showDamageFromExplosion', True)
+def new_showDamageFromExplosion(self, attackerID, center, effectsIndex, damageFactor, *a, **k):
+    if LOG_EVENTS:
+        player = BigWorld.player()
+        g_replayCtrl = BattleReplay.g_replayCtrl
+        shellName = ''
+        for shot in player.arena.vehicles[attackerID]['vehicleType'].gun.shots:
+            if effectsIndex == shot.shell.effectsIndex:
+                shellName = shot.shell.name
+        eventInfo = ('%s' % player.arenaUniqueID,
+                     ('%.3f' % g_replayCtrl.getArenaLength() if g_replayCtrl.isPlaying else player.arena.periodEndTime - BigWorld.serverTime()).replace('.',','),
+                     '"Vehicle.showDamageFromExplosion"',
+                     '%s' % player.arena.vehicles[self.id]['accountDBID'],
+                     '%s' % player.arena.vehicles[attackerID]['accountDBID'],
+                     json.dumps({'effectsIndex':effectsIndex, 'shellName':shellName, 'damageFactor':damageFactor}))
+        printStrings(LOG_EVENTS_FILENAME, eventInfo)
 
 def onBattleLoaded(statistic):
     if LOG_BATTLES:
         player = BigWorld.player()
-        battleInfo = ('%d' % player.arenaUniqueID,
-                      '"%s(%d)"' % (ARENA_GUI_TYPE_LABEL.LABELS[player.arenaGuiType], player.arenaGuiType),
-                      '"%s(%d)"' % (getArenaGeomentryName(player.arenaTypeID), player.arenaTypeID),
-                      '"%s(%d)"' % (BONUS_TYPE_NAMES[player.arenaBonusType], player.arenaBonusType),
-                      '"%s(%d)"' % (SeasonTypeNames[SeasonType.fromArenaKind(player.arenaExtraData['arenaKind'])], player.arenaExtraData['arenaKind']),
+        g_replayCtrl = BattleReplay.g_replayCtrl
+        battleInfo = ('%s' % player.arenaUniqueID,
+                      g_replayCtrl.arenaInfo['dateTime'],
+                      '"%s"' % g_replayCtrl.arenaInfo['serverName'],
+                      '"%d(%s)"' % (player.arenaGuiType, ARENA_GUI_TYPE_LABEL.LABELS.get(player.arenaGuiType)),
+                      '"%d(%s)"' % (player.arenaTypeID, getArenaGeomentryName(player.arenaTypeID)),
+                      '"%d(%s)"' % (player.arenaBonusType, BONUS_TYPE_NAMES.get(player.arenaBonusType)),
+                      '"%d(%s)"' % (player.arenaExtraData['arenaKind'], SeasonTypeNames[SeasonType.fromArenaKind(player.arenaExtraData['arenaKind'])]),
                       '%d' % player.arenaExtraData['battleLevel'],
                       #--------------
                       '%d' % statistic.allyTanksCount,
@@ -193,8 +256,8 @@ def onXVMBattleLoaded(statistic):
     if LOG_PLAYERS:
         statistic = {x['_id']:x for x in statistic['players']} if statistic and statistic.has_key('players') else {}
         for vType in g_TanksStatistic.base.values():
-            playerInfo = ['%d' % BigWorld.player().arenaUniqueID,
-                          '%d' % vType['accountDBID'] if vType['accountDBID'] else '',
+            playerInfo = ['%s' % BigWorld.player().arenaUniqueID,
+                          '%s' % vType['accountDBID'],
                           '"%s"' % vType['userName'],
                           '%d' % vType['isEnemy'],
                           '"%s"' % tankTypeAbb(vType['type']['tag']),
@@ -225,7 +288,6 @@ try:
 except:
     print '[%s] Loading mod: Not found "mod.NetStatisticsModules", loading stoped!' % __author__
 else:
-    g_overrideLib = _OverrideLib() 
     g_XVMStatisticsEvents.OnStatsBattleLoaded += onXVMBattleLoaded
     g_StatisticEvents.OnBattleLoaded += onBattleLoaded
 
@@ -233,7 +295,7 @@ else:
     if CONFIG_FILENAME is not None:
         #Config ------------------------------------------
         config = json.loads(re.compile('(/\*(.|\n)*?\*/)|((#|//).*?$)', re.I | re.M).sub('', codecs.open(CONFIG_FILENAME, 'r', 'utf-8-sig').read()))
-        logPath = getLogPath(config['System']['Dir'])
+        logPath = getLogPath(config['System']['Dir'] + ('/log_' + datetime.now().strftime('%d%m%y_%H%M%S_%f')[:17] if config['System']['UniquePostfix'] else ''))
         LOG_BATTLES_FILENAME = logPath + '/sl_battles_ver_%s.csv' % CSV_VERSION
         LOG_PLAYERS_FILENAME = logPath + '/sl_players_ver_%s.csv' % CSV_VERSION
         LOG_EVENTS_FILENAME = logPath + '/sl_events_ver_%s.csv' % CSV_VERSION
