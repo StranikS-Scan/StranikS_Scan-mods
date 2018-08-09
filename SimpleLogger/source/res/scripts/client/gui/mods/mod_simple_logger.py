@@ -1,6 +1,6 @@
 ﻿# -*- coding: utf-8 -*-
 
-__version__ = 'V1.0.2 P2.7 W1.0.0 08.08.2018'
+__version__ = 'V1.0.3 P2.7 W1.0.0 09.08.2018'
 __author__  = 'StranikS_Scan'
 
 import BigWorld, Event, BattleReplay
@@ -179,13 +179,14 @@ EVENTS_HEADER =  ('"arenaUniqueID"','"remainingTime"','"event"','"userDBID"','"a
 @g_overrideLib.registerEvent(PlayerAvatar, 'showTracer', True)
 def new_showTracer(self, shooterID, shotID, isRicochet, effectsIndex, *a, **k):
     if LOG_EVENTS:
-        g_replayCtrl = BattleReplay.g_replayCtrl
         shellName = ''
         for shot in self.arena.vehicles[shooterID]['vehicleType'].gun.shots:
             if effectsIndex == shot.shell.effectsIndex:
                 shellName = shot.shell.name
+        g_replayCtrl = BattleReplay.g_replayCtrl
         eventInfo = ('%s' % self.arenaUniqueID,
-                     ('%.3f' % g_replayCtrl.getArenaLength() if g_replayCtrl.isPlaying else self.arena.periodEndTime - BigWorld.serverTime()).replace('.',','),
+                     ('%.3f' % (g_replayCtrl.getArenaLength() if g_replayCtrl.isPlaying else \
+                                self.arena.periodEndTime - BigWorld.serverTime())).replace('.',','),
                      '"PlayerAvatar.showTracer"',
                      '%s' % self.arena.vehicles[shooterID]['accountDBID'],
                      '',
@@ -196,16 +197,17 @@ def new_showTracer(self, shooterID, shotID, isRicochet, effectsIndex, *a, **k):
 def new_showDamageFromShot(self, attackerID, points, effectsIndex, damageFactor, *a, **k):
     if LOG_EVENTS:
         player = BigWorld.player()
-        g_replayCtrl = BattleReplay.g_replayCtrl
         shellName = ''
         for shot in player.arena.vehicles[attackerID]['vehicleType'].gun.shots:
             if effectsIndex == shot.shell.effectsIndex:
                 shellName = shot.shell.name
+        g_replayCtrl = BattleReplay.g_replayCtrl
         effectsDescr = vehicles.g_cache.shotEffects[effectsIndex]
         maxHitEffectCode, decodedPoints, maxDamagedComponent = DamageFromShotDecoder.decodeHitPoints(points, self.appearance.collisions)
         hasPiercedHit = DamageFromShotDecoder.hasDamaged(maxHitEffectCode)
         eventInfo = ('%s' % player.arenaUniqueID,
-                     ('%.3f' % g_replayCtrl.getArenaLength() if g_replayCtrl.isPlaying else player.arena.periodEndTime - BigWorld.serverTime()).replace('.',','),
+                     ('%.3f' % (g_replayCtrl.getArenaLength() if g_replayCtrl.isPlaying else \
+                                player.arena.periodEndTime - BigWorld.serverTime())).replace('.',','),
                      '"Vehicle.showDamageFromShot"',
                      '%s' % player.arena.vehicles[self.id]['accountDBID'],
                      '%s' % player.arena.vehicles[attackerID]['accountDBID'],
@@ -218,13 +220,14 @@ def new_showDamageFromShot(self, attackerID, points, effectsIndex, damageFactor,
 def new_showDamageFromExplosion(self, attackerID, center, effectsIndex, damageFactor, *a, **k):
     if LOG_EVENTS:
         player = BigWorld.player()
-        g_replayCtrl = BattleReplay.g_replayCtrl
         shellName = ''
         for shot in player.arena.vehicles[attackerID]['vehicleType'].gun.shots:
             if effectsIndex == shot.shell.effectsIndex:
                 shellName = shot.shell.name
+        g_replayCtrl = BattleReplay.g_replayCtrl
         eventInfo = ('%s' % player.arenaUniqueID,
-                     ('%.3f' % g_replayCtrl.getArenaLength() if g_replayCtrl.isPlaying else player.arena.periodEndTime - BigWorld.serverTime()).replace('.',','),
+                     ('%.3f' % (g_replayCtrl.getArenaLength() if g_replayCtrl.isPlaying else \
+                                player.arena.periodEndTime - BigWorld.serverTime())).replace('.',','),
                      '"Vehicle.showDamageFromExplosion"',
                      '%s' % player.arena.vehicles[self.id]['accountDBID'],
                      '%s' % player.arena.vehicles[attackerID]['accountDBID'],
@@ -234,10 +237,25 @@ def new_showDamageFromExplosion(self, attackerID, center, effectsIndex, damageFa
 def onBattleLoaded(statistic):
     if LOG_BATTLES:
         player = BigWorld.player()
+        araneInfo = None
         g_replayCtrl = BattleReplay.g_replayCtrl
+        if g_replayCtrl.isPlaying or g_replayCtrl.isRecording:
+            arenaInfo = g_replayCtrl._BattleReplay__replayCtrl.getArenaInfoStr()
+            if arenaInfo and isinstance(arenaInfo, str):
+                try:
+                    arenaInfo = json.loads(arenaInfo)
+                except:
+                    pass
+        if arenaInfo:
+            dateTime = arenaInfo.get('dateTime','')
+            serverName = arenaInfo.get('serverName','')
+        else:
+            now = datetime.now()
+            dateTime = '%02d.%02d.%04d %02d:%02d:%02d' % (now.day, now.month, now.year, now.hour, now.minute, now.second)
+            serverName = g_replayCtrl.connectionMgr.serverUserName
         battleInfo = ('%s' % player.arenaUniqueID,
-                      g_replayCtrl.arenaInfo['dateTime'],
-                      '"%s"' % g_replayCtrl.arenaInfo['serverName'],
+                      dateTime,
+                      '"%s"' % serverName,
                       '"%d(%s)"' % (player.arenaGuiType, ARENA_GUI_TYPE_LABEL.LABELS.get(player.arenaGuiType)),
                       '"%d(%s)"' % (player.arenaTypeID, getArenaGeomentryName(player.arenaTypeID)),
                       '"%d(%s)"' % (player.arenaBonusType, BONUS_TYPE_NAMES.get(player.arenaBonusType)),
