@@ -1,11 +1,11 @@
 ﻿# -*- coding: utf-8 -*-
 
-__version__ = 'V1.7.1 P2.7 W1.0.0 24.03.2018'
+__version__ = 'V1.7.2 P2.7 W1.0.0 09.08.2018'
 __author__  = 'StranikS_Scan'
 
 import BigWorld
 from VehicleStickers import ModelStickers, SlotTypes
-from account_helpers.CustomFilesCache import CustomFilesCache, WorkerThread
+from account_helpers.CustomFilesCache import CustomFilesCache
 from os import path, walk, remove
 
 # Хук на аттач эмблем --------------------------------------------------------------
@@ -28,17 +28,19 @@ ModelStickers.attachStickers = new_attachStickers
 
 # Хук на скачивание эмблем кланов --------------------------------------------------
 
-old___run_download = WorkerThread._WorkerThread__run_download
+old__readRemoteFile = CustomFilesCache._CustomFilesCache__readRemoteFile
 
-def new__run_download(self, url, modified_time, callback, **params):
+def new__readRemoteFile(self, url, modified_time, showImmediately, headers):
     if str(url).find('emblem_64x64_tank.png') == -1:
-        old___run_download(self, url, modified_time, callback, **params)
+        old__readRemoteFile(self, url, modified_time, showImmediately, headers)
 
-WorkerThread._WorkerThread__run_download = new__run_download
+CustomFilesCache._CustomFilesCache__readRemoteFile = new__readRemoteFile
 
 # Очистка кэша иконок в AppData\Roaming\ -------------------------------------------
 
-def new__init__(self):
+ICONS_FILES = ('icons.bak', 'icons.dir', 'icons.dat')
+
+def new__init__(self, cacheFolder):
     try:
         Preferences = BigWorld.wg_getPreferencesFilePath()
         if path.isfile(Preferences):
@@ -46,16 +48,17 @@ def new__init__(self):
             if path.isdir(Custom_data):
                 for name in next(walk(Custom_data))[2]:
                     name = Custom_data + '/'+ name
-                    if path.isfile(name):
-                        if 'icons.bak' in name or 'icons.dir' in name or 'icons.dat' in name:
-                            try:
-                                remove(name)
-                            except:
-                                pass
-                            else:
-                                print '[%s] "emblems_off": cache of icons was deleted successfully!' % __author__
+                    if path.isfile(name):                        
+                        for icons_file in ICONS_FILES:
+                            if icons_file in name:
+                                try:
+                                    remove(name)
+                                except:
+                                    pass
+                                else:
+                                    print '[%s] "emblems_off": %s was deleted successfully!' % (__author__, icons_file)
     finally:
-        old__init__(self)
+        old__init__(self, cacheFolder)
 
 old__init__ = CustomFilesCache.__init__ 
 CustomFilesCache.__init__ = new__init__
