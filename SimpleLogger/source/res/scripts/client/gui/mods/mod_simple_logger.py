@@ -1,6 +1,6 @@
 ﻿# -*- coding: utf-8 -*-
 
-__version__ = 'V1.0.3 P2.7 W1.0.0 09.08.2018'
+__version__ = 'V1.0.4 P2.7 W1.0.0 10.08.2018'
 __author__  = 'StranikS_Scan'
 
 import BigWorld, Event, BattleReplay
@@ -19,7 +19,7 @@ from datetime import datetime
 
 # Consts and Vars ..........................................................................
 
-CSV_VERSION = '1.1'
+CSV_VERSION = '1.2'
 
 CONFIG_FILENAME = None
 LOG_BATTLES = LOG_PLAYERS = LOG_EVENTS = False
@@ -168,7 +168,7 @@ VEHICLE_HIT_EFFECT_NAMES = {getattr(VEHICLE_HIT_EFFECT, k):k for k in dir(VEHICL
 
 # CSV -----------------------------------------------------------------
 
-BATTLES_HEADER = ('"arenaUniqueID"','"dateTime"','"serverName"','"arenaGuiType"','"arenaTypeID"','"arenaBonusType"','"arenaKind"','"battleLevel"') + \
+BATTLES_HEADER = ('"arenaUniqueID"','"dateTime"','"serverName"','"playerDBID"', '"userName"', '"vehicleTypeTag"', '"vehicleTypeNFKD"', '"vehicleLevel"', '"arenaGuiType"','"arenaTypeID"','"arenaBonusType"','"arenaKind"','"battleLevel"') + \
                  ('"allyTanksCount"','"enemyTanksCount"','"allyTeamHP"','"enemyTeamHP"','"allyTanksAvgLevel"','"enemyTanksAvgLevel"')
 PLAYERS_HEADER = ('"arenaUniqueID"','"accountDBID"','"userName"','"isEnemy"','"vehicleTypeTag"','"vehicleTypeNFKD"','"level"','"hp"') + \
                  ('"xvm_battles"','"xvm_wins"','"xvm_experience"','"xvm_damage"','"xvm_frags"','"xvm_spot"','"xvm_capture"','"xmv_defense"','"xvm_accuracy"','"xvm_survived"','"xvm_wn8"','"xvm_wgr"','"xvm_wtr"') 
@@ -253,9 +253,15 @@ def onBattleLoaded(statistic):
             now = datetime.now()
             dateTime = '%02d.%02d.%04d %02d:%02d:%02d' % (now.day, now.month, now.year, now.hour, now.minute, now.second)
             serverName = g_replayCtrl.connectionMgr.serverUserName
+        vType = statistic.base[player.playerVehicleID]
         battleInfo = ('%s' % player.arenaUniqueID,
                       dateTime,
                       '"%s"' % serverName,
+                      '%s' % vType['accountDBID'],
+                      '"%s"' % vType['userName'],
+                      '"%s"' % tankTypeAbb(vType['type']['tag']),
+                      '"%s"' % vType['name'],
+                      '%d' % vType['level'],
                       '"%d(%s)"' % (player.arenaGuiType, ARENA_GUI_TYPE_LABEL.LABELS.get(player.arenaGuiType)),
                       '"%d(%s)"' % (player.arenaTypeID, getArenaGeomentryName(player.arenaTypeID)),
                       '"%d(%s)"' % (player.arenaBonusType, BONUS_TYPE_NAMES.get(player.arenaBonusType)),
