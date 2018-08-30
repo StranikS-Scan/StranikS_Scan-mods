@@ -3,6 +3,7 @@
 ## List of modules:
 * "xvm_statistics" - getting statistics from the XVM-server
 * "victory_chances" - calculation of chances for victory in battle
+* "hook_methods" - system module for the Monkey patch (is similar to the code from XVM)
 
 ## Install
 Put the wotmod-file to a folder "World_of_Tanks\mods\X.X.X\"
@@ -205,5 +206,28 @@ from gui.mods.victory_chances import UPDATE_REASONE
   UPDATE_REASONE.VEHICLE_DEATH  -> int
   UPDATE_REASONE.HEALTH_CHANGED -> int
 ```
+---
+#### Module "hook_methods"
+Methods:
+'''
+from gui.mods.hook_methods import g_overrideLib
+
+#Replacing class method or class attribute
+@g_overrideLib.overrideMethod(PlayerAvatar=cls, 'enableServerAim'=method, debug_traceback=True)
+def new_enableServerAim(base=method, self, *a, **k):
+    base(self, True)
+
+#Executes the custom code after the original code
+@g_overrideLib.registerEvent(PlayerAvatar=cls, '_PlayerAvatar__startGUI'=method, debug_traceback=True)
+def new__startGUI(self):
+    if SHOW_ZOOMINDICATOR:
+        g_appLoader.getDefBattleApp().CameraTuner_ZoomIndicator = BigWorld.new_FlashTextLabel(ZOOMINDICATOR_TEXT)
+
+#Executes the user code before calling the original code
+@BigWorld.new_overrideLib.registerEvent(PlayerAvatar=cls, '_PlayerAvatar__destroyGUI'=method, debug_traceback=True, prepend=True)
+def new__destroyGUI(self):
+    if SHOW_ZOOMINDICATOR:
+        del g_appLoader.getDefBattleApp().CameraTuner_ZoomIndicator
+'''
 
 [here]:./HISTORY.md

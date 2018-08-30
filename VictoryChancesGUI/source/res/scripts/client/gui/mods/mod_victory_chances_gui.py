@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V2.2.5 P2.7 W1.0.0 25.03.2018'
+__version__ = 'V2.2.6 P2.7 W1.0.2 13.08.2018'
 
 import BigWorld, Event, BattleReplay, Keys
 from gui.Scaleform.framework.entities.BaseDAAPIComponent import BaseDAAPIComponent
@@ -208,8 +208,9 @@ def printStat(stat, full=False, changeID=None):
 getShowOneStat = lambda stat: '%s  %4d HP %6.2f %s  %s\n' % ('E' if stat['isEnemy'] else 'A', stat['hp'], stat['contribution'], '%', removeAccents(stat['name']))
 
 def showStat(stat, changeID=None):
-    if SHOW_INFO and hasattr(g_appLoader.getDefBattleApp(), 'VictoryChancesGUI'):
-        label = g_appLoader.getDefBattleApp().VictoryChancesGUI
+    battle = g_appLoader.getDefBattleApp()
+    if SHOW_INFO and hasattr(battle, 'VictoryChancesGUI'):
+        label = battle.VictoryChancesGUI
         info  = ''
         if SHOW_ITEMS['TanksCount']:
             Ally, Enemy = stat.allyTanksCount, stat.enemyTanksCount 
@@ -255,6 +256,8 @@ def showStat(stat, changeID=None):
 
 # Hooks ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+from gui.mods.hook_methods import g_overrideLib
+
 def onVehiclesChanged(statistic, reasone, vID):
     showStat(statistic, vID if reasone != UPDATE_REASONE.VEHICLE_ADDED else None)
     if reasone != UPDATE_REASONE.VEHICLE_ADDED:
@@ -277,7 +280,7 @@ def onBattleLoaded(statistic):
         KEYS_SHOWHIDEALL['Key'] = getattr(Keys, KEYS_SHOWHIDEALL['Key'])
         KEYS_TANKSLIST    = config['System']['TeamChances']['Hotkeys']['TanksList']
         KEYS_TANKSLIST['Key'] = getattr(Keys, KEYS_TANKSLIST['Key'])
-        GUI_TEXT['Name']   = config['System']['TeamChances']['GUIFormat']['Font']['Name']
+        GUI_TEXT['Font']   = config['System']['TeamChances']['GUIFormat']['Font']['Name']
         GUI_TEXT['Size']   = config['System']['TeamChances']['GUIFormat']['Font']['Size']
         GUI_TEXT['Color']  = config['System']['TeamChances']['GUIFormat']['Font']['Color'].replace('$','#')
         GUI_TEXT['Bold']   = config['System']['TeamChances']['GUIFormat']['Font']['Bold']
@@ -313,8 +316,9 @@ def onKeyDown(event):
     global KEYS_SHOWHIDEALL
     if event.isKeyDown() and BigWorld.isKeyDown(KEYS_SHOWHIDEALL['Key']):
         KEYS_SHOWHIDEALL['ShowDefault'] = not KEYS_SHOWHIDEALL['ShowDefault']
-    if hasattr(g_appLoader.getDefBattleApp(), 'VictoryChancesGUI'):
-        g_appLoader.getDefBattleApp().VictoryChancesGUI.Visible(KEYS_SHOWHIDEALL['ShowDefault'])
+    battle = g_appLoader.getDefBattleApp()
+    if hasattr(battle, 'VictoryChancesGUI'):
+        battle.VictoryChancesGUI.Visible(KEYS_SHOWHIDEALL['ShowDefault'])
     if CONFIG_FILENAME:
         s = re.sub('"ShowDefault"\s*:\s*(true|false)', '"ShowDefault": ' + str(KEYS_SHOWHIDEALL['ShowDefault']).lower(), codecs.open(CONFIG_FILENAME, 'r', 'utf-8-sig').read())
         with codecs.open(CONFIG_FILENAME, 'w', 'utf-8-sig') as f:
@@ -327,18 +331,6 @@ def onShowHideTanksList(event):
         SHOW_ITEMS['TanksList'] = not SHOW_ITEMS['TanksList']
         showStat(g_TanksStatistic)
 
-def new__destroyGUI(self):
-    InputHandler.g_instance.onKeyDown -= onKeyDown
-    InputHandler.g_instance.onKeyDown -= onShowHideTanksList
-    InputHandler.g_instance.onKeyUp   -= onShowHideTanksList
-    old__destroyGUI(self)
-
-def new_onBecomeNonPlayer(self):
-    try:
-        g_StatisticEvents.OnVehiclesChanged -= onVehiclesChanged
-    finally:
-        old_onBecomeNonPlayer(self)
-
 try:
     from gui.mods.gambiter import g_guiFlash
     from gui.mods.gambiter.flash import COMPONENT_TYPE, COMPONENT_EVENT
@@ -350,12 +342,21 @@ else:
     except:
         print '[%s] Loading mod: Not found "victory_chances" module, loading stoped!' % __author__
     else:
-        g_StatisticEvents.OnBattleLoaded  += onBattleLoaded
-    
-        old__destroyGUI = PlayerAvatar._PlayerAvatar__destroyGUI
-        PlayerAvatar._PlayerAvatar__destroyGUI = new__destroyGUI
-    
-        old_onBecomeNonPlayer = PlayerAvatar.onBecomeNonPlayer
-        PlayerAvatar.onBecomeNonPlayer = new_onBecomeNonPlayer
-    
+        g_StatisticEvents.OnBattleLoaded += onBattleLoaded
+
+        @g_overrideLib.registerEvent(PlayerAvatar, '_PlayerAvatar__destroyGUI', True, True)
+        def new__destroyGUI(self):
+            InputHandler.g_instance.onKeyDown -= onKeyDown
+            InputHandler.g_instance.onKeyDown -= onShowHideTanksList
+            InputHandler.g_instance.onKeyUp   -= onShowHideTanksList
+            if CONFIG_FILENAME is not None:
+                battle = g_appLoader.getDefBattleApp()
+                battle.VictoryChancesGUI.Visible(False)
+                battle.VictoryChancesGUI.__del__()
+                del battle.VictoryChancesGUI
+
+        @g_overrideLib.registerEvent(PlayerAvatar, 'onBecomeNonPlayer', True, True)
+        def new_onBecomeNonPlayer(self):
+            g_StatisticEvents.OnVehiclesChanged -= onVehiclesChanged
+
         print '[%s] Loading mod: "victory_chances_gui" %s (http://www.koreanrandom.com)' % (__author__, __version__)

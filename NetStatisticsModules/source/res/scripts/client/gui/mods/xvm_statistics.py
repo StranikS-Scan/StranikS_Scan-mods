@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V1.6 P2.7 W1.0.0 24.03.2018'
+__version__ = 'V1.8 P2.7 W1.1.0 30.08.2018'
 
 import BigWorld
 from Event import Event
@@ -536,7 +536,11 @@ class _XVMConsole(object):
 
     def getVersionWithLimit_Async(self, onAsyncReport=None):
         if g_UserToken.accountDBID and g_UserToken.userToken:
-            return self.__prepareRequest(True, XVM_GETVERSION.format(TOKEN=g_UserToken.userToken, ID=g_UserToken.accountDBID), onAsyncReport)
+            self.__prepareRequest(True, XVM_GETVERSION.format(TOKEN=g_UserToken.userToken, ID=g_UserToken.accountDBID), onAsyncReport)
+        elif onAsyncReport:
+            onAsyncReport(None)
+        else:
+            self.OnAsyncReports(None)
 
     #accountDBID=2365719
     def getStatsByID(self, accountDBID):
@@ -545,7 +549,11 @@ class _XVMConsole(object):
 
     def getStatsByID_Async(self, accountDBID, onAsyncReport=None):
         if g_UserToken.userToken:
-            return self.__prepareRequest(True, XVM_STATSBYID.format(TOKEN=g_UserToken.userToken, ID=accountDBID), onAsyncReport)
+            self.__prepareRequest(True, XVM_STATSBYID.format(TOKEN=g_UserToken.userToken, ID=accountDBID), onAsyncReport)
+        elif onAsyncReport:
+            onAsyncReport(None)
+        else:
+            self.OnAsyncReports(None)
 
     #region='RU', nick='StranikS_Scan'
     def getStatsByNick(self, region, nick):
@@ -554,7 +562,11 @@ class _XVMConsole(object):
 
     def getStatsByNick_Async(self, region, nick, onAsyncReport=None):
         if g_UserToken.userToken:
-            return self.__prepareRequest(True, XVM_STATSBYNICK.format(TOKEN=g_UserToken.userToken, REGION=region, NICK=nick), onAsyncReport)
+            self.__prepareRequest(True, XVM_STATSBYNICK.format(TOKEN=g_UserToken.userToken, REGION=region, NICK=nick), onAsyncReport)
+        elif onAsyncReport:
+            onAsyncReport(None)
+        else:
+            self.OnAsyncReports(None)
 
     #See "_load_stat" in xvm_main\python\stats.py
     #ids={2365719:54529, 4100782:51841, accountDBID:compactDescr, ...}
@@ -578,7 +590,11 @@ class _XVMConsole(object):
                     requestList.append('%d=%d%s' % (accountDBID, vehCD, '=1' if not replay and accountDBID == g_UserToken.accountDBID else ''))
             ids = ','.join(requestList)
             url = XVM_STATSREPLAY.format(TOKEN=g_UserToken.userToken, DICT=ids) if replay else XVM_STATS.format(TOKEN=g_UserToken.userToken, DICT=ids)
-            return self.__prepareRequest(True, url, onAsyncReport)
+            self.__prepareRequest(True, url, onAsyncReport)
+        elif onAsyncReport:
+            onAsyncReport(None)
+        else:
+            self.OnAsyncReports(None)
 
     def getOnlineUsersCount(self):
         if g_UserToken.userToken:
@@ -586,7 +602,11 @@ class _XVMConsole(object):
 
     def getOnlineUsersCount_Async(self, onAsyncReport=None):
         if g_UserToken.userToken:
-            return self.__prepareRequest(True, XVM_ONLINE.format(TOKEN=g_UserToken.userToken), onAsyncReport)
+            self.__prepareRequest(True, XVM_ONLINE.format(TOKEN=g_UserToken.userToken), onAsyncReport)
+        elif onAsyncReport:
+            onAsyncReport(None)
+        else:
+            self.OnAsyncReports(None)
 
 class _XVMStatisticsEvents(object):
     def __init__(self):
@@ -608,9 +628,11 @@ g_XVMStatisticsEvents = _XVMStatisticsEvents()
 
 # Hooks ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+from hook_methods import g_overrideLib
+
+@g_overrideLib.registerEvent(PlayerAvatar, '_PlayerAvatar__startGUI')
 def new__startGUI(self):
-    old__startGUI(self)
-    if g_XVMStatisticsEvents.OnStatsBattleLoaded._Event__delegates:
+    if g_XVMStatisticsEvents.OnStatsBattleLoaded._delegates:
         ids = {}
         for vID, vData in self.arena.vehicles.iteritems():
             vehCD = None
@@ -625,6 +647,8 @@ def new__startGUI(self):
             ids[vData['accountDBID']] = vehCD
         if ids:
             g_XVMConsole.getStats_Async(ids, g_XVMStatisticsEvents.OnStatsBattleLoaded)
+        else:
+            g_XVMStatisticsEvents.OnStatsBattleLoaded(None)
 
 def addStatsAccountBecomePlayer():
     if isPlayerAccount():
@@ -634,11 +658,8 @@ def addStatsAccountBecomePlayer():
             g_UserToken.init()
             if g_UserToken.errorStatus:
                 print '[%s] "xvm_statistics": %s' % (__author__, g_UserToken.errorStatus)
-            elif g_XVMStatisticsEvents.OnStatsAccountBecomePlayer._Event__delegates:
+            elif g_XVMStatisticsEvents.OnStatsAccountBecomePlayer._delegates:
                 g_XVMConsole.getStatsByID_Async(g_UserToken.accountDBID, g_XVMStatisticsEvents.OnStatsAccountBecomePlayer)
-
-old__startGUI = PlayerAvatar._PlayerAvatar__startGUI
-PlayerAvatar._PlayerAvatar__startGUI = new__startGUI
 
 g_playerEvents.onAccountBecomePlayer += addStatsAccountBecomePlayer
 

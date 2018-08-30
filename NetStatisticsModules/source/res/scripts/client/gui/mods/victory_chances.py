@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V2.2 P2.7 W1.0.1 06.08.2018'
+__version__ = 'V2.3 P2.7 W1.0.1 13.08.2018'
 
 import BigWorld
 from Event import Event
@@ -121,8 +121,10 @@ g_StatisticEvents = _StatisticEvents()
 
 # Hooks ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-def new_onHealthChanged(self, newHealth, attackerID, attackReasonID):
-    old_onHealthChanged(self, newHealth, attackerID, attackReasonID)
+from hook_methods import g_overrideLib
+
+@g_overrideLib.registerEvent(Vehicle, 'onHealthChanged')
+def new_onHealthChanged(self, *a, **k):
     if self.id in g_TanksStatistic.base:
         tank = g_TanksStatistic.base[self.id]
         if tank['hp'] != self.health:
@@ -133,8 +135,8 @@ def new_onHealthChanged(self, newHealth, attackerID, attackReasonID):
                 reasone = UPDATE_REASONE.VEHICLE_DEATH
             g_TanksStatistic.update(reasone, self.id)
 
+@g_overrideLib.registerEvent(PlayerAvatar, 'vehicle_onEnterWorld')
 def new_vehicle_onEnterWorld(self, vehicle):
-    old_vehicle_onEnterWorld(self, vehicle)
     if vehicle.id in g_TanksStatistic.base:
         entity = BigWorld.entity(vehicle.id)
         if entity:
@@ -147,16 +149,14 @@ def new_vehicle_onEnterWorld(self, vehicle):
                     reasone = UPDATE_REASONE.VEHICLE_DEATH
                 g_TanksStatistic.update(reasone, vehicle.id)
 
-def new_onArenaVehicleKilled(self, targetID, attackerID, equipmentID, reason):
-    try:
-        if targetID in g_TanksStatistic.base:
-            tank = g_TanksStatistic.base[targetID]
-            if tank['isAlive']:
-                tank['isAlive'] = False
-                tank['hp'] = 0
-                g_TanksStatistic.update(UPDATE_REASONE.VEHICLE_DEATH, targetID)
-    finally:
-        old_onArenaVehicleKilled(self, targetID, attackerID, equipmentID, reason)
+@g_overrideLib.registerEvent(PlayerAvatar, '_PlayerAvatar__onArenaVehicleKilled', True, True)
+def new_onArenaVehicleKilled(self, targetID, *a, **k):
+    if targetID in g_TanksStatistic.base:
+        tank = g_TanksStatistic.base[targetID]
+        if tank['isAlive']:
+            tank['isAlive'] = False
+            tank['hp'] = 0
+            g_TanksStatistic.update(UPDATE_REASONE.VEHICLE_DEATH, targetID)
 
 def addVehicleInfo(vID, vInfo):
     if vID not in g_TanksStatistic.base:
@@ -209,33 +209,19 @@ def addVehicleInfo(vID, vInfo):
         #Update -------------------------------------------------------------
         g_TanksStatistic.update(UPDATE_REASONE.VEHICLE_ADDED, vID)
 
-def new_CompoundAppearance_prerequisites(self, typeDescriptor, vID, health, isCrewActive, isTurretDetached, outfitCD):
-    result = old_CompoundAppearance_prerequisites(self, typeDescriptor, vID, health, isCrewActive, isTurretDetached, outfitCD)
+@g_overrideLib.overrideMethod(CompoundAppearance, 'prerequisites')
+def new_CompoundAppearance_prerequisites(base, self, typeDescriptor, vID, *a, **k):
+    result = base(self, typeDescriptor, vID, *a, **k)
     try:
         addVehicleInfo(vID, BigWorld.player().arena.vehicles.get(vID))
     finally:
         return result
 
+@g_overrideLib.registerEvent(PlayerAvatar, '_PlayerAvatar__startGUI')
 def new__startGUI(self):
-    old__startGUI(self)
     g_TanksStatistic.init()
     for vID in self.arena.vehicles:
         addVehicleInfo(vID, self.arena.vehicles.get(vID))
     g_StatisticEvents.OnBattleLoaded(statistic=g_TanksStatistic)
-
-old_onHealthChanged = Vehicle.onHealthChanged
-Vehicle.onHealthChanged = new_onHealthChanged
-
-old_vehicle_onEnterWorld = PlayerAvatar.vehicle_onEnterWorld
-PlayerAvatar.vehicle_onEnterWorld = new_vehicle_onEnterWorld
-
-old_onArenaVehicleKilled = PlayerAvatar._PlayerAvatar__onArenaVehicleKilled
-PlayerAvatar._PlayerAvatar__onArenaVehicleKilled = new_onArenaVehicleKilled
-
-old_CompoundAppearance_prerequisites = CompoundAppearance.prerequisites
-CompoundAppearance.prerequisites = new_CompoundAppearance_prerequisites
-
-old__startGUI = PlayerAvatar._PlayerAvatar__startGUI
-PlayerAvatar._PlayerAvatar__startGUI = new__startGUI
 
 print '[%s] Loading mod: "victory_chances" %s (http://www.koreanrandom.com)' % (__author__, __version__)
