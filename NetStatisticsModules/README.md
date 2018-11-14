@@ -209,7 +209,7 @@ from gui.mods.victory_chances import UPDATE_REASONE
 ---
 #### Module "hook_methods"
 Methods:
-'''
+```
 from gui.mods.hook_methods import g_overrideLib
 
 #Replacing class method or class attribute
@@ -228,6 +228,6 @@ def new__startGUI(self):
 def new__destroyGUI(self):
     if SHOW_ZOOMINDICATOR:
         del g_appLoader.getDefBattleApp().CameraTuner_ZoomIndicator
-'''
+```
 
 [here]:./HISTORY.md
