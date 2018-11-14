@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V2.2.6 P2.7 W1.0.2 13.08.2018'
+__version__ = 'V2.3 P2.7 W1.2.0 14.11.2018'
 
 import BigWorld, Event, BattleReplay, Keys
 from gui.Scaleform.framework.entities.BaseDAAPIComponent import BaseDAAPIComponent
@@ -18,7 +18,7 @@ from Avatar import PlayerAvatar
 
 import re
 from datetime import datetime
-import ResMgr, os, codecs, json
+import os, codecs, json
 import unicodedata
 
 # Consts and Vars ..........................................................................
@@ -41,6 +41,7 @@ GUI_TEXT  = {'Name': 'VictoryChancesGUI',
              'Size': 16,
              'Color': '#00EDFF',
              'Pos': (400, -400),
+             'Align': ('center','center'),
              'Alpha': 0.95,
              'Shadow': True,
              'LastChangeColor': ('#FC2847','#28FC47'),
@@ -51,6 +52,18 @@ GUI_TEXT  = {'Name': 'VictoryChancesGUI',
 
 import GUI
 
+def _posAlignment(x, y, align, isScreen = False):
+    screenWidth, screenHeight = GUI.screenResolution()
+    if align[0] == 'center':
+        x = x - screenWidth // 2 if isScreen else screenWidth // 2 + x
+    elif align[0] == 'right':
+        x = screenWidth - x
+    if align[1] == 'center':
+        y = y - screenHeight // 2 if isScreen else screenHeight // 2 + y
+    elif align[1] == 'bottom':
+        y = screenHeight - y
+    return x, y
+
 class FlashTextLabel(object):
     def __init__(self, params):
         self.text = ''
@@ -59,9 +72,8 @@ class FlashTextLabel(object):
         options = {'visible': self.visible, 'index': 2, 'drag': True, 'multiline': True, 'border': True, 'text': self.text, \
                    'shadow': {'distance': 0, 'angle': 0, 'color': 0x000000, 'alpha': 0, 'blurX': 0, 'blurY': 0, 'strength': 0, 'quality': 0}}
         self.x, self.y = params['Pos'] if 'Pos' in params else (0,0)
-        screenWidth, screenHeight = GUI.screenResolution()
-        options['x'] = screenWidth // 2 + self.x
-        options['y'] = screenHeight // 2 + self.y
+        self.align = params['Align'] if 'Align' in params else ('center','center')
+        options['x'], options['y'] = _posAlignment(self.x, self.y, self.align)
         if 'Alpha' in params:
             options['alpha'] = params['Alpha']
         if 'ToolTip' in params:
@@ -84,19 +96,12 @@ class FlashTextLabel(object):
         COMPONENT_EVENT.UPDATED -= self.updatePosition
         g_guiFlash.deleteComponent(self.name)
 
-    def setPosition(self, value):
-        self.x, self.y = value
-        screenWidth, screenHeight = GUI.screenResolution()
-        g_guiFlash.updateComponent(self.name, {'x': screenWidth // 2 + self.x, 'y': screenHeight // 2 + self.y})
-
     def updatePosition(self, name, options):
         if str(name) == self.name:
             x = options.get('x')
             y = options.get('y')
             if x is not None and y is not None:
-                screenWidth, screenHeight = GUI.screenResolution()
-                x -= screenWidth // 2
-                y -= screenHeight // 2
+                x, y = _posAlignment(x, y, self.align, True)
                 if x != self.x or y != self.y:
                     self.x = x
                     self.y = y
@@ -135,25 +140,21 @@ class FlashTextLabel(object):
 
 # Classes and functions ===========================================================
 
-def getRootPath():
-    return ResMgr.openSection('../paths.xml')['Paths'].values()[0].asString.replace('res_mods', 'mods') + '/'
-
 def getLogFileName(dirname, prefix=''):
-    rootPath = getRootPath()
     if dirname:
         dirname = dirname.replace('\\', '/')
         if dirname[-1] != '/':
             dirname += '/'
-    path = (rootPath if not (':' in dirname) else '') + dirname
+    path = ('./mods/' if ':' not in dirname else '') + dirname
     if not os.path.exists(path):
         try:
             os.makedirs(path)
         except:
-            path = rootPath
+            path = './mods/'
     return path + prefix + datetime.now().strftime('%d%m%y_%H%M%S_%f')[:17] + '.log'
 
 def getConfigFileName():
-    filename = getRootPath() + 'configs/VictoryChancesGUI/VictoryChancesGUI.cfg'
+    filename = './mods/configs/VictoryChancesGUI/VictoryChancesGUI.cfg'
     return filename if os.path.exists(filename) else None
 
 def removeAccents(value): 
@@ -273,29 +274,31 @@ def onBattleLoaded(statistic):
     CONFIG_FILENAME = getConfigFileName()
     if CONFIG_FILENAME is not None:
         #Config ------------------------------------------
-        config     = json.loads(re.compile('(/\*(.|\n)*?\*/)|((#|//).*?$)', re.I | re.M).sub('', codecs.open(CONFIG_FILENAME, 'r', 'utf-8-sig').read()))
-        SHOW_INFO  = config['System']['TeamChances']['GUIStatistics']['Show']
-        SHOW_ITEMS = config['System']['TeamChances']['GUIStatistics']['ShowItems']
-        KEYS_SHOWHIDEALL  = config['System']['TeamChances']['Hotkeys']['ShowHideAll']
+        config = json.loads(re.compile('(/\*(.|\n)*?\*/)|((#|//).*?$)', re.I | re.M).sub('', codecs.open(CONFIG_FILENAME, 'r', 'utf-8-sig').read()))
+        TeamChances = config['System']['TeamChances']
+        SHOW_INFO = TeamChances['GUIStatistics']['Show']
+        SHOW_ITEMS = TeamChances['GUIStatistics']['ShowItems']
+        KEYS_SHOWHIDEALL = TeamChances['Hotkeys']['ShowHideAll']
         KEYS_SHOWHIDEALL['Key'] = getattr(Keys, KEYS_SHOWHIDEALL['Key'])
-        KEYS_TANKSLIST    = config['System']['TeamChances']['Hotkeys']['TanksList']
+        KEYS_TANKSLIST = TeamChances['Hotkeys']['TanksList']
         KEYS_TANKSLIST['Key'] = getattr(Keys, KEYS_TANKSLIST['Key'])
-        GUI_TEXT['Font']   = config['System']['TeamChances']['GUIFormat']['Font']['Name']
-        GUI_TEXT['Size']   = config['System']['TeamChances']['GUIFormat']['Font']['Size']
-        GUI_TEXT['Color']  = config['System']['TeamChances']['GUIFormat']['Font']['Color'].replace('$','#')
-        GUI_TEXT['Bold']   = config['System']['TeamChances']['GUIFormat']['Font']['Bold']
-        GUI_TEXT['Alpha']  = config['System']['TeamChances']['GUIFormat']['Font']['Alpha']
-        GUI_TEXT['Shadow'] = config['System']['TeamChances']['GUIFormat']['Font']['Shadow']
-        GUI_TEXT['Pos']    = (config['System']['TeamChances']['GUIFormat']['Position'][0],
-                              config['System']['TeamChances']['GUIFormat']['Position'][1])
-        GUI_TEXT['LastChangeColor'] = (config['System']['TeamChances']['GUIFormat']['LastChangeColor']['AllyTeam'].replace('$','#'), 
-                                       config['System']['TeamChances']['GUIFormat']['LastChangeColor']['EnemyTeam'].replace('$','#'))
-        GUI_TEXT['CompareValuesColor'] = (config['System']['TeamChances']['GUIFormat']['CompareValuesColor']['BestValue'].replace('$','#'), 
-                                          config['System']['TeamChances']['GUIFormat']['CompareValuesColor']['WorstValue'].replace('$','#'),
-                                          config['System']['TeamChances']['GUIFormat']['Font']['Color'].replace('$','#'))
-        PRINT_LOG    = config['System']['TeamChances']['PrintLog']
-        PRINT_ITEMS  = config['System']['TeamChances']['LogFormat']['PrintItems']
-        LOG_FILENAME = getLogFileName(config['System']['TeamChances']['LogFormat']['Dir'], config['System']['TeamChances']['LogFormat']['Prefix'])
+        GUIFormat = TeamChances['GUIFormat']
+        GUI_TEXT['Font'] = GUIFormat['Font']['Name']
+        GUI_TEXT['Size'] = GUIFormat['Font']['Size']
+        GUI_TEXT['Color'] = GUIFormat['Font']['Color'].replace('$','#')
+        GUI_TEXT['Bold'] = GUIFormat['Font']['Bold']
+        GUI_TEXT['Alpha'] = GUIFormat['Font']['Alpha']
+        GUI_TEXT['Shadow'] = GUIFormat['Font']['Shadow']
+        GUI_TEXT['Pos'] = (GUIFormat['Position'][0], GUIFormat['Position'][1])
+        GUI_TEXT['Align'] = (GUIFormat['Align'][0].lower(), GUIFormat['Align'][1].lower()) 
+        GUI_TEXT['LastChangeColor'] = (GUIFormat['LastChangeColor']['AllyTeam'].replace('$','#'), 
+                                       GUIFormat['LastChangeColor']['EnemyTeam'].replace('$','#'))
+        GUI_TEXT['CompareValuesColor'] = (GUIFormat['CompareValuesColor']['BestValue'].replace('$','#'), 
+                                          GUIFormat['CompareValuesColor']['WorstValue'].replace('$','#'),
+                                          GUIFormat['Font']['Color'].replace('$','#'))
+        PRINT_LOG = TeamChances['PrintLog']
+        PRINT_ITEMS = TeamChances['LogFormat']['PrintItems']
+        LOG_FILENAME = getLogFileName(TeamChances['LogFormat']['Dir'], TeamChances['LogFormat']['Prefix'])
         #Flash -------------------------------------------
         g_appLoader.getDefBattleApp().VictoryChancesGUI = VictoryChancesGUI = FlashTextLabel(GUI_TEXT)
         VictoryChancesGUI.Visible(KEYS_SHOWHIDEALL['ShowDefault'])

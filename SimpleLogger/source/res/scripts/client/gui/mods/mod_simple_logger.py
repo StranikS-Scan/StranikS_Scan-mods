@@ -1,6 +1,6 @@
 ﻿# -*- coding: utf-8 -*-
 
-__version__ = 'V1.0.5 P2.7 W1.0.0 13.08.2018'
+__version__ = 'V1.0.6 P2.7 W1.2.0 14.11.2018'
 __author__  = 'StranikS_Scan'
 
 import BigWorld, Event, BattleReplay
@@ -13,7 +13,7 @@ from items.components.c11n_constants import SeasonType, SeasonTypeNames
 from VehicleEffects import DamageFromShotDecoder
 
 import re
-import ResMgr, os, codecs, json
+import os, codecs, json
 import unicodedata
 from datetime import datetime
 
@@ -29,25 +29,21 @@ LOG_EVENTS_FILENAME = None
 
 # Classes and functions ===========================================================
 
-def getRootPath():
-    return ResMgr.openSection('../paths.xml')['Paths'].values()[0].asString.replace('res_mods', 'mods') + '/'
-
 def getLogPath(dirname):
-    rootPath = getRootPath()
     if dirname:
         dirname = dirname.replace('\\', '/')
         if dirname[-1] != '/':
             dirname += '/'
-    path = (rootPath if not (':' in dirname) else '') + dirname
+    path = ('./mods/' if ':' not in dirname else '') + dirname
     if not os.path.exists(path):
         try:
             os.makedirs(path)
         except:
-            path = rootPath
+            path = './mods/'
     return path
 
 def getConfigFileName():
-    filename = getRootPath() + 'configs/SimpleLogger/SimpleLogger.cfg'
+    filename = './mods/configs/SimpleLogger/SimpleLogger.cfg'
     return filename if os.path.exists(filename) else None
 
 def removeAccents(value): 
