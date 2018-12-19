@@ -1,4 +1,6 @@
-﻿class _EventHook(object):
+﻿# -*- coding: utf-8 -*-
+
+class _EventHook(object):
     def __init__(self):
         self.__handlers = []
 

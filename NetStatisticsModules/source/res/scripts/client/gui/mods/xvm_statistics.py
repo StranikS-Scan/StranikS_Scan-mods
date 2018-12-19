@@ -1,30 +1,37 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V1.8 P2.7 W1.1.0 30.08.2018'
+__version__ = 'V2.0 P2.7 W1.2.0 07.12.2018'
 
 import BigWorld
 from Event import Event
 import BattleReplay
 from Avatar import PlayerAvatar
 from PlayerEvents import g_playerEvents
+from avatar_helpers import getAvatarDatabaseID
 from helpers import isPlayerAccount
+from constants import CURRENT_REALM, DEFAULT_LANGUAGE
 
 from os import path, makedirs
-from StringIO import StringIO
-import json, gzip, cPickle, urllib2, threading
-from math import log
+import cPickle, threading
+
+from http_methods import loadJsonUrl
+from time import sleep
 
 # Consts .....................................................................
 
 #API_VERSION in "xvm_main\python\consts.py"-module
 API_VERSION = '4.0'
-
 #SERVERS in "xvm_main\python\consts.py"-module
-XVM_SERVER     = 'https://static.modxvm.com'
 XVM_SERVER_API = 'https://stat.modxvm.com:443/{API}/{REQ}'
 
-#Request a token from the server, example
+#Different regions
+REGION_RU = 'RU'
+REGION_EU = 'EU'
+REGION_NA = 'NA'
+REGION_AS = 'ASIA'
+
+#Request a token from the server, example:
 #---> https://stat.modxvm.com/4.0/getToken/-/2365719
 #{"status":"badToken"}
 #---> https://stat.modxvm.com/4.0/getToken/a5257ae7-2e3a-368b-6a2c-b78e5f240f72/2365719
@@ -34,7 +41,7 @@ XVM_SERVER_API = 'https://stat.modxvm.com:443/{API}/{REQ}'
 # "status":"active"}
 XVM_GETTOKEN = XVM_SERVER_API.format(API=API_VERSION, REQ='getToken/{TOKEN}/{ID}')
 
-#Get info by current version of XVM, example
+#Get info by current version of XVM, example:
 #---> https://stat.modxvm.com:443/4.0/getVersionWithLimit/a5257ae7-2e3a-368b-6a2c-b78e5f240f72/2365719/50
 #{"topClansWGM":{},
 # "topClansWSH":{"KOPM2":{"cid":223790,"rank":1,"emblem":"http://stat.modxvm.com/emblems/top/{size}/223790.png"},...},
@@ -45,7 +52,7 @@ XVM_GETVERSION = XVM_SERVER_API.format(API=API_VERSION, REQ='getVersionWithLimit
 #----> https://stat.modxvm.com/4.0/getStatsByID/a5257ae7-2e3a-368b-6a2c-b78e5f240f72/2365719
 #{"b":19807,
 # "e":1462,
-# "v":{"63505":{"b":1,"w":0,"cap":0,"def":0,"dmg":52,"frg":0,"spo":0,"srv":0,"wtr":753}},
+# "v":{"63505":{"b":1,"w":0,"cap":0,"def":0,"dmg":52,"frg":0,"spo":0,"srv":0,"wtr":753,"id":63505}},
 # "w":11594,
 # "dt":"2018-01-30T00:52:23.465+00:00",
 # "nm":"StranikS_Scan",
@@ -58,7 +65,7 @@ XVM_STATSBYID = XVM_SERVER_API.format(API=API_VERSION, REQ='getStatsByID/{TOKEN}
 #---> https://stat.modxvm.com/4.0/getStatsByNick/a5257ae7-2e3a-368b-6a2c-b78e5f240f72/RU/StranikS_Scan
 #{"b":19807,
 # "e":1462,
-# "v":{"63505":{"b":1,"w":0,"cap":0,"def":0,"dmg":52,"frg":0,"spo":0,"srv":0,"wtr":753},...},
+# "v":{"63505":{"b":1,"w":0,"cap":0,"def":0,"dmg":52,"frg":0,"spo":0,"srv":0,"wtr":753,"id":63505},...},
 # "w":11594,
 # "dt":"2018-01-30T00:52:23.465+00:00",
 # "nm":"StranikS_Scan",
@@ -72,7 +79,7 @@ XVM_STATSBYNICK = XVM_SERVER_API.format(API=API_VERSION, REQ='getStatsByNick/{TO
 #{"players":[{"b":19807,
 #             "e":1462,
 #             "r":8989,
-#             "v":{"b":331,"w":202,"cap":1159,"def":286,"dmg":98371,"frg":592,"spo":459,"srv":122,"wtr":2919},
+#             "v":{"b":331,"w":202,"cap":1159,"def":286,"dmg":98371,"frg":592,"spo":459,"srv":122,"wtr":2919,"id":63505},
 #             "w":11594,
 #             "nm":"StranikS_Scan",
 #             "ts":1517273543465,"xp":null,"_id":2365719,"cap":38210,"cid":69731,"def":14537,"dmg":29176230,"frg":23928,"hip":71,"lvl":7.53855,
@@ -80,7 +87,7 @@ XVM_STATSBYNICK = XVM_SERVER_API.format(API=API_VERSION, REQ='getStatsByNick/{TO
 #            {"b":39441,
 #             "e":881,
 #             "r":4981,
-#             "v":{"b":40,"w":20,"xp":6367,"cap":0,"def":0,"dmg":2682,"frg":13,"mom":3,"spo":35,"srv":7,"wtr":2642},
+#             "v":{"b":40,"w":20,"xp":6367,"cap":0,"def":0,"dmg":2682,"frg":13,"mom":3,"spo":35,"srv":7,"wtr":2642,"id":63505},
 #             "w":19317,
 #             "nm":"JM71",
 #             "ts":1517552268047,"xp":14205000,"_id":4100782,"cap":24261,"cid":null,"def":22125,"dmg":33753828,"frg":26228,"hip":51,"lvl":7.27749,
@@ -88,7 +95,7 @@ XVM_STATSBYNICK = XVM_SERVER_API.format(API=API_VERSION, REQ='getStatsByNick/{TO
 XVM_STATS       = XVM_SERVER_API.format(API=API_VERSION, REQ='getStats/{TOKEN}/{DICT}')
 XVM_STATSREPLAY = XVM_SERVER_API.format(API=API_VERSION, REQ='getStatsReplay/{TOKEN}/{DICT}')
 
-#Get online WOT-server statistics
+#Get online WOT-server statistics, example:
 #---> https://stat.modxvm.com/4.0/getOnlineUsersCount/a5257ae7-2e3a-368b-6a2c-b78e5f240f72
 #{"ru":[{"players_online":17522,"server":"RU8"},...],
 # "asia":[{"players_online":2353,"server":"501"}],
@@ -96,261 +103,12 @@ XVM_STATSREPLAY = XVM_SERVER_API.format(API=API_VERSION, REQ='getStatsReplay/{TO
 # "na":[{"players_online":10146,"server":"303"},{"players_online":1859,"server":"304"}]}
 XVM_ONLINE = XVM_SERVER_API.format(API=API_VERSION, REQ='getOnlineUsersCount/{TOKEN}')
 
-#{'xwgr': [1361, ...], 'xeff': [378, ...], 'xwn8': [56,...], 'xwin': [43.44, ...], 'xwtr': [1409, ...]}
-TABLE_XVMSCALE = XVM_SERVER + '/xvmscales.json.gz'
-#{'header': {'url': 'https://...', 'source': 'XVM', 'version': '2018-02-12'},
-# 'data': [{'expDamage': 1079.886, 'expSpot': 0.769, 'IDNum': 55297, 'expWinRate': 52.995, 'expDef': 0.881, 'expFrag': 1.146}, ...]}
-TABLE_WN8 = XVM_SERVER + '/wn8-data-exp/json/wn8exp.json.gz'
-#{'62737': {'tf': 1.64, 'x': [342, ...], 'td': 2168, 'ad': 1171, 'af': 0.78}, ...}
-TABLE_XTE = XVM_SERVER + '/xte.json.gz'
-#{'62737': {'tf': 1.64, 'x': [726, ...], 'td': 2168, 'ad': 1171, 'af': 0.78}, ...}
-TABLE_XTDB = XVM_SERVER + '/xtdb.json.gz'
-
 # Static functions ***********************************************************
 
-def _loadUrl(request):
-    try:
-        response = urllib2.urlopen(request)
-        if response.code == 200:
-            return response.read()
-    except:
-        pass
-
-def _loadJsonUrl(request):
-    stats = _loadUrl(request)
-    if stats:
-        try:
-            stats = json.loads(stats)
-        except:
-            pass
-        else:
-            if isinstance(stats, dict):
-                return stats if stats.get('status', '') not in ['badRequest', 'badToken'] else {}
+def _userRegion(accountDBID):
+    return REGION_RU if accountDBID < 500000000 else REGION_EU if accountDBID < 1000000000 else REGION_NA if accountDBID < 2000000000 else REGION_AS
 
 # Classes ====================================================================
-
-class _Calculator(object):
-    #Converting an absolute value to an index or float value of a universal XVM-Scale
-    #rating = ['wgr', 'eff', 'wn8', 'win', 'wtr', 'xte', 'xtdb', 'sup']
-    def globalRating(self, value, rating, exact=False):
-        if rating in ['xte', 'xtdb']:
-            return max(0, min(value, 100))
-        else:
-            stat = None
-            if rating == 'sup':
-                stat = g_Tables.supTable
-            elif rating in ['wgr', 'eff', 'wn8', 'win', 'wtr']:
-                if g_Tables.xvmscaleTable:
-                    stat = g_Tables.xvmscaleTable.get('x'+rating)
-            if stat:
-                index = next((i for i,x in enumerate(stat) if x > value), 100)
-                if exact:
-                    if index < 100:
-                        if index == 0:
-                            if value > 0:
-                                return float(value) / stat[0]
-                        else:
-                            return index + (float(value) - stat[index-1]) / (stat[index] - stat[index-1])
-                    return float(index)
-                return index
-
-    #Get the value of the specific rating by the XVM-Scale
-    #rating = ['wgr', 'eff', 'wn8', 'win', 'wtr', 'xte', 'xtdb', 'sup']
-    def specificRating(self, value, rating): 
-        if rating in ['xte', 'xtdb']:
-            return max(0, min(value, 100))
-        else:
-            if rating == 'sup':
-                stat = g_Tables.supTable
-            elif rating in ['wgr', 'eff', 'wn8', 'win', 'wtr']:
-                if g_Tables.xvmscaleTable:
-                    stat = g_Tables.xvmscaleTable.get('x' + rating)
-            if stat:
-                if value > 0:
-                    if int(value) == 0:
-                        return float(value) * stat[0]
-                    indexed_value = stat[min(int(value), 100)-1]
-                    if value < 100 and isinstance(value, float): 
-                        return indexed_value + (float(value) - int(value)) * (stat[int(value)] - stat[int(value)-1])
-                    return indexed_value
-                return 0.0
-
-    #Based on https://koreanrandom.com/forum/topic/13434-
-    #params = {'id':int, 'b':int, 'w':int, 'dmg':int, 'frg':int, 'spo':int, 'def':int}
-    def wn8(self, params):
-        if isinstance(params, dict):
-            id     = params.get('id')
-            allBAT = params.get('b', 0)
-            allWIN = params.get('w', 0)
-            allDMG = params.get('dmg', 0)
-            allFRG = params.get('frg', 0)
-            allSPO = params.get('spo', 0)
-            allDEF = params.get('def', 0)
-            if id is not None and allBAT:
-                stat = g_Tables.wn8idsTable.get(id)
-                if stat:
-                    #Weighted values
-                    weiWIN = 100 * float(allWIN) / (allBAT * stat['expWinRate'])
-                    weiDAM =       float(allDMG) / (allBAT * stat['expDamage'])
-                    weiFRG =       float(allFRG) / (allBAT * stat['expFrag'])
-                    weiSPO =       float(allSPO) / (allBAT * stat['expSpot'])
-                    weiDEF =       float(allDEF) / (allBAT * stat['expDef'])
-                    #Normalized values
-                    normWIN = max(0,                    (weiWIN - 0.71) / (1 - 0.71)  )
-                    normDAM = max(0,                    (weiDAM - 0.22) / (1 - 0.22)  )
-                    normFRG = max(0, min(normDAM + 0.2, (weiFRG - 0.12) / (1 - 0.12) ))
-                    normSPO = max(0, min(normDAM + 0.1, (weiSPO - 0.38) / (1 - 0.38) ))
-                    normDEF = max(0, min(normDAM + 0.1, (weiDEF - 0.10) / (1 - 0.10) ))
-                    return 980*normDAM + 210*normDAM*normFRG + 155*normFRG*normSPO + 75*normDEF*normFRG + 145*min(1.8, normWIN)
-
-    #Based on https://koreanrandom.com/forum/topic/23829-
-    #params = {'id':int, 'b':int, 'dmg':int, 'frg':int}
-    def xte(self, params):
-        if isinstance(params, dict):
-            id     = params.get('id')
-            allBAT = params.get('b', 0)
-            allDMG = params.get('dmg', 0)
-            allFRG = params.get('frg', 0)
-            if id is not None and allBAT:
-                stat = g_Tables.xteTable.get(str(id))
-                if stat:
-                    avgDMG = stat['ad']
-                    avgFRG = stat['af']
-                    diffDMG = float(allDMG) / allBAT - avgDMG
-                    diffFRG = float(allFRG) / allBAT - avgFRG
-                    normDMG = (1 + diffDMG / (stat['td'] - avgDMG)) if diffDMG >= 0 else (1 + diffDMG / (avgDMG - 0.4 * avgDMG))
-                    normFRG = (1 + diffFRG / (stat['tf'] - avgFRG)) if diffFRG >= 0 else (1 + diffFRG / (avgFRG - 0.4 * avgFRG))
-                    TEFF = 750*normDMG + 250*normFRG
-                    index = next((i for i,x in enumerate(stat['x']) if x > TEFF), 100)
-                    if index < 100:
-                        if index == 0:
-                            #Minimum is reached when dmg=frg=0, it corresponds normDMG=normFRG=-2/3 and TEFF = -2000/3 = -666.66(6)
-                            if TEFF >= -666:
-                                return (TEFF + 666) / (stat['x'][0] + 666)
-                        else:
-                            return index + (TEFF - stat['x'][index-1]) / (stat['x'][index] - stat['x'][index-1])
-                    return float(index)
-
-    #Based on 'calculateXTDB' in "xvm_main\python\vehinfo.py"-module
-    #params = {'id':int, 'b':int, 'dmg':int}
-    def xtdb(self, params):
-        if isinstance(params, dict):
-            id     = params.get('id')
-            allBAT = params.get('b', 0)
-            allDMG = params.get('dmg', 0)
-            if id is not None and allBAT:
-                stat = g_Tables.xtdbTable.get(str(id))
-                if stat:
-                    avgDMG = float(allDMG) / allBAT
-                    index = next((i for i,x in enumerate(stat['x']) if x > avgDMG), 100)
-                    if index < 100:
-                        if index == 0:
-                            if avgDMG > 0:
-                                return avgDMG / stat['x'][0]
-                        else:
-                            return index + (avgDMG - stat['x'][index-1]) / (stat['x'][index] - stat['x'][index-1])
-                    return float(index)
-
-    #Based on https://koreanrandom.com/forum/topic/13386-
-    #params = {'b':int, 'avglvl':float, 'dmg':int, 'frg':int, 'spo':int, 'cap':int, 'def':int}
-    def eff(self, params):
-        if isinstance(params, dict):
-            allBAT  = params.get('b', 0)
-            avgTIER = params.get('avglvl', 0.0)
-            allDMG  = params.get('dmg', 0)
-            allFRG  = params.get('frg', 0)
-            allSPO  = params.get('spo', 0)
-            allCAP  = params.get('cap', 0)
-            allDEF  = params.get('def', 0)
-            if allBAT and avgTIER:
-                avgDMG = float(allDMG) / allBAT
-                avgFRG = float(allFRG) / allBAT
-                avgSPO = float(allSPO) / allBAT
-                avgCAP = float(allCAP) / allBAT
-                avgDEF = float(allDEF) / allBAT
-                return 10*(0.23 + 2.0*avgTIER/100.0)/(avgTIER + 2.0)*avgDMG + 250*avgFRG + 150*avgSPO + 150*log(avgCAP + 1, 1.732) + 150*avgDEF
-
-class TABLE_ERRORS:
-    OK          = 0
-    NOT_READED  = 1
-    NOT_UPDATED = 2
-
-#Based on then code from vehinfo.py
-class _Tables(object):
-    errorStatus   = property(lambda self: self.__getErrorStatus())
-    xvmscaleTable = property(lambda self: self.__xvmscale)
-    wn8Table      = property(lambda self: self.__wn8)
-    wn8idsTable   = property(lambda self: self.__wn8ids)
-    xteTable      = property(lambda self: self.__xte)
-    xtdbTable     = property(lambda self: self.__xtdb)
-    supTable      = property(lambda self: self.__sup)
-
-    def __init__(self):
-        self.__error = TABLE_ERRORS.OK
-        self.__xvmscale_filename = CACHE_PATH + 'cache/' + path.basename(TABLE_XVMSCALE) + '.dat'
-        self.__wn8_filename      = CACHE_PATH + 'cache/' + path.basename(TABLE_WN8)      + '.dat'
-        self.__xte_filename      = CACHE_PATH + 'cache/' + path.basename(TABLE_XTE)      + '.dat'
-        self.__xtdb_filename     = CACHE_PATH + 'cache/' + path.basename(TABLE_XTDB)     + '.dat'
-        #Сorresponds to the XVM 7.4.0 of 06/02/2018
-        self.__sup = [1.2, 1.5, 1.9, 2.5, 3.1, 3.8, 4.6, 5.5, 6.6, 7.7, 9.0, 10, 12, 14, 15, 17, 19, 21, 24, 26, 28, 31, 33, 36, 38, 41, 43, 46, 48, 51, 53, 56, 58, 60, 63, 65, 67, 69, 71, 73, 74, 76, 78, 79, 80.8, 82.2, 83.6, 84.8, 86.0, 87.1, 88.1, 89.0, 89.9, 90.8, 91.6, 92.3, 92.9, 93.6, 94.1, 94.7, 95.1, 95.6, 96.0, 96.4, 96.7, 97.0, 97.3, 97.6, 97.8, 98.0, 98.2, 98.4, 98.6, 98.7, 98.9, 99.0, 99.1, 99.2, 99.3, 99.37, 99.44, 99.51, 99.57, 99.62, 99.67, 99.71, 99.75, 99.78, 99.81, 99.84, 99.86, 99.88, 99.90, 99.92, 99.93, 99.95, 99.96, 99.97, 99.98, 99.99]
-        self.init()
-
-    def init(self):
-        self.__xvmscale = \
-        self.__wn8      = \
-        self.__wn8ids   = \
-        self.__xte      = \
-        self.__xtdb     = None
-        if self.__downloadTable(TABLE_XVMSCALE, self.__xvmscale_filename) and \
-           self.__downloadTable(TABLE_WN8,      self.__wn8_filename) and \
-           self.__downloadTable(TABLE_XTE,      self.__xte_filename) and \
-           self.__downloadTable(TABLE_XTDB,     self.__xtdb_filename):
-            self.__error = TABLE_ERRORS.OK
-        else:
-            self.__error = TABLE_ERRORS.NOT_UPDATED
-        self.__xvmscale = self.__getTable(self.__xvmscale_filename)
-        self.__wn8      = self.__getTable(self.__wn8_filename)
-        self.__xte      = self.__getTable(self.__xte_filename)
-        self.__xtdb     = self.__getTable(self.__xtdb_filename)
-        if not isinstance(self.__xvmscale, dict) or \
-           not isinstance(self.__wn8, dict) or \
-           not isinstance(self.__xte, dict) or \
-           not isinstance(self.__xtdb, dict):
-            self.__error = TABLE_ERRORS.NOT_READED
-        if self.__wn8:
-            self.__wn8ids = {}
-            for stat in self.__wn8['data']:
-                self.__wn8ids[int(stat['IDNum'])] = dict([x for x in stat.iteritems() if x[0] != 'IDNum'])
-
-    def __getTable(self, filename):
-        if path.exists(filename):
-            try:
-                with open(filename,'rb') as f:
-                    content = f.read()
-                return json.loads(gzip.GzipFile(fileobj=StringIO(cPickle.loads(content))).read())
-            except:
-                pass
-
-    def __downloadTable(self, url, filename):
-        content = _loadUrl(url)
-        if content:
-            dirname = path.dirname(filename)
-            try:
-                if not path.exists(dirname):
-                    makedirs(dirname)
-                with open(filename, 'wb') as f:
-                    f.write(cPickle.dumps(content))
-                return True
-            except:
-                pass
-        return False
-
-    def __getErrorStatus(self):
-        if self.__error == TABLE_ERRORS.NOT_READED:
-            return 'One or more tables are not read from disk!'
-        elif self.__error == TABLE_ERRORS.NOT_UPDATED:
-            return 'One or more tables are not updated from the XVM-site!'       
-        return ''
 
 class TOKEN_ERRORS:
     OK              = 0
@@ -380,7 +138,7 @@ class _UserToken(object):
             self.__saveAccountDBID()
             self.__tokensBase = self.__getTokensBase()
             #V1. Сheck for a new token on the server
-            stats = _loadJsonUrl(XVM_GETTOKEN.format(TOKEN='-', ID=self.__accountDBID))
+            stats = loadJsonUrl(XVM_GETTOKEN.format(TOKEN='-', ID=self.__accountDBID))
             if stats is None:
                 self.__error = TOKEN_ERRORS.NOT_CONNECTION
                 return
@@ -392,7 +150,7 @@ class _UserToken(object):
             if not self.__userToken:
                 self.__userToken = self.__tokensBase.get(self.__accountDBID, '')
                 if self.__userToken:
-                    stats = _loadJsonUrl(XVM_GETTOKEN.format(TOKEN=self.__userToken, ID=self.__accountDBID))
+                    stats = loadJsonUrl(XVM_GETTOKEN.format(TOKEN=self.__userToken, ID=self.__accountDBID))
                     if stats is None:
                         self.__error = TOKEN_ERRORS.NOT_CONNECTION
                     elif not stats or stats.get('status', None) in [None, 'inactive']:
@@ -401,7 +159,7 @@ class _UserToken(object):
             if not self.__userToken:
                 self.__userToken = self.__getLocalToken()
                 if self.__userToken:
-                    stats = _loadJsonUrl(XVM_GETTOKEN.format(TOKEN=self.__userToken, ID=self.__accountDBID))
+                    stats = loadJsonUrl(XVM_GETTOKEN.format(TOKEN=self.__userToken, ID=self.__accountDBID))
                     if stats is None:
                         self.__error = TOKEN_ERRORS.NOT_CONNECTION
                     elif not stats or stats.get('status', None) in [None, 'inactive']:
@@ -503,17 +261,37 @@ class _UserToken(object):
         if self.__error == TOKEN_ERRORS.NEED_LOGIN:
             return 'You need to be logged in once for authorization!'
         elif self.__error == TOKEN_ERRORS.NEED_ACTIVATION:
-            return 'Requires activation on the XVM-site (https://modxvm.com/)!'
+            return 'Requires activation on the XVM-site (https://modxvm.com/) and restart the game client!'
         elif self.__error == TOKEN_ERRORS.NOT_CONNECTION:
             return 'No connection to the XVM-server!'        
         return ''
+
+#Determines the home region of the game client or authorized player
+class _HomeRegion(object):
+    homeRegion  = property(lambda self: self.__homeRegion)
+    accountDBID = property(lambda self: self.__accountDBID)
+
+    def __init__(self):
+        self.__accountDBID = 0
+        self.__homeRegion = REGION_RU if CURRENT_REALM == 'RU' else REGION_EU if CURRENT_REALM == 'EU' else \
+                            REGION_NA if CURRENT_REALM == 'NA' else REGION_AS if CURRENT_REALM in ('ASIA', 'CN', 'KR') else \
+                            REGION_RU if DEFAULT_LANGUAGE == 'ru' else REGION_NA
+
+    def setAccountDBID(self, accountDBID):
+        if accountDBID:
+            self.__accountDBID = accountDBID
+            self.__homeRegion = _userRegion(self.__accountDBID)
+            return True
+        self.__accountDBID = 0
+        return False
 
 #Sending typical requests to the XVM-server
 class _XVMConsole(object):
     def __init__(self):
         self.OnAsyncReports = Event()
+        self.__timeDelay = 0.5
 
-    def __prepareRequest(self, async, url, onAsyncReport):
+    def __prepareRequest(self, async, url, onAsyncReport=None):
         if async:
             thread = threading.Thread(target=self.__sendRequest, args=[async, url, onAsyncReport])
             thread.setDaemon(True)
@@ -522,47 +300,99 @@ class _XVMConsole(object):
             return self.__sendRequest(async, url, None)
 
     def __sendRequest(self, async, url, onAsyncReport):
-        stats = _loadJsonUrl(url)
+        answer = loadJsonUrl(url)
         if async:
             if onAsyncReport:
-                onAsyncReport(stats)
+                onAsyncReport(answer)
             else:
-                self.OnAsyncReports(stats)
-        return stats
+                self.OnAsyncReports(answer)
+        return answer
 
-    def getVersionWithLimit(self):
+    def getVersion(self):
         if g_UserToken.accountDBID and g_UserToken.userToken:
-            return self.__prepareRequest(False, XVM_GETVERSION.format(TOKEN=g_UserToken.userToken, ID=g_UserToken.accountDBID), None)
+            return self.__prepareRequest(False, XVM_GETVERSION.format(TOKEN=g_UserToken.userToken, ID=g_UserToken.accountDBID))
 
-    def getVersionWithLimit_Async(self, onAsyncReport=None):
-        if g_UserToken.accountDBID and g_UserToken.userToken:
-            self.__prepareRequest(True, XVM_GETVERSION.format(TOKEN=g_UserToken.userToken, ID=g_UserToken.accountDBID), onAsyncReport)
+    def getOnlineUsersCount(self):
+        if g_UserToken.userToken:
+            return self.__prepareRequest(False, XVM_ONLINE.format(TOKEN=g_UserToken.userToken))
+
+    def __prepareStatsByParamsRequest(self, async, params, onAsyncReport, timeout):
+        if async:
+            thread = threading.Thread(target=self.__sendStatsByParamsRequest, args=[async, params, onAsyncReport, timeout])
+            thread.setDaemon(True)
+            thread.start()
+        else:
+            return self.__sendStatsByParamsRequest(async, params, None, timeout)
+
+    def __sendQuery(self, query, players, timeout):
+        answer = None
+        while not answer and timeout >= 0:
+            answer = loadJsonUrl(query)
+            if not answer:
+                timeout -= self.__timeDelay
+                sleep(self.__timeDelay)
+        if answer:
+            if 'v' in answer and answer['v']:
+                vehicle = answer['v']
+                for id in vehicle:
+                    vehicle[id]['id'] = id
+            players['players'].append(answer)
+
+    def __sendStatsByParamsRequest(self, async, params, onAsyncReport, timeout):
+        players = {'players': []}
+        if len(params) == 3:
+            XVM_QUERY, tags, region = params
+        else:
+            XVM_QUERY, tags = params
+        threads = []
+        for tag in tags:
+            thread = threading.Thread(target=self.__sendQuery, args=[XVM_QUERY.format(TOKEN=g_UserToken.userToken, ID=tag) if XVM_QUERY == XVM_STATSBYID else \
+                                                                     XVM_QUERY.format(TOKEN=g_UserToken.userToken, REGION=region, NICK=tag), players, timeout])
+            thread.setDaemon(True)
+            thread.start()
+            threads.append(thread)
+        for thread in threads:
+            thread.join()
+        if async:
+            if onAsyncReport:
+                onAsyncReport(players)
+            else:
+                self.OnAsyncReports(players)
+        return players
+
+    #IDs=[2365719, 34483, accountDBID, ...] or 2365719 only
+    def getStatsByID(self, IDs, timeout=5.0):
+        if g_UserToken.userToken and IDs:
+            if isinstance(IDs, int):
+                IDs = [IDs]
+            return self.__prepareStatsByParamsRequest(False, [XVM_STATSBYID, IDs], None, timeout)
+
+    def getStatsByID_Async(self, IDs, onAsyncReport=None, timeout=5):
+        if g_UserToken.userToken and IDs:
+            if isinstance(IDs, int):
+                IDs = [IDs]
+            self.__prepareStatsByParamsRequest(True, [XVM_STATSBYID, IDs], onAsyncReport, timeout)
         elif onAsyncReport:
             onAsyncReport(None)
         else:
             self.OnAsyncReports(None)
 
-    #accountDBID=2365719
-    def getStatsByID(self, accountDBID):
-        if g_UserToken.userToken:
-            return self.__prepareRequest(False, XVM_STATSBYID.format(TOKEN=g_UserToken.userToken, ID=accountDBID), None)
+    #nicknames = ['Straik','MeeGo'] or 'Straik' only; region='RU' 
+    def getStatsByNick(self, nicknames, region='', timeout=5.0):
+        if g_UserToken.userToken and nicknames:
+            if isinstance(nicknames, str):
+                nicknames = [nicknames]
+            if not region:
+                region = g_HomeRegion.homeRegion
+            return self.__prepareStatsByParamsRequest(False, [XVM_STATSBYNICK, nicknames, region], None, timeout)
 
-    def getStatsByID_Async(self, accountDBID, onAsyncReport=None):
-        if g_UserToken.userToken:
-            self.__prepareRequest(True, XVM_STATSBYID.format(TOKEN=g_UserToken.userToken, ID=accountDBID), onAsyncReport)
-        elif onAsyncReport:
-            onAsyncReport(None)
-        else:
-            self.OnAsyncReports(None)
-
-    #region='RU', nick='StranikS_Scan'
-    def getStatsByNick(self, region, nick):
-        if g_UserToken.userToken:
-            return self.__prepareRequest(False, XVM_STATSBYNICK.format(TOKEN=g_UserToken.userToken, REGION=region, NICK=nick), None)
-
-    def getStatsByNick_Async(self, region, nick, onAsyncReport=None):
-        if g_UserToken.userToken:
-            self.__prepareRequest(True, XVM_STATSBYNICK.format(TOKEN=g_UserToken.userToken, REGION=region, NICK=nick), onAsyncReport)
+    def getStatsByNick_Async(self, nicknames, region='', onAsyncReport=None, timeout=5):
+        if g_UserToken.userToken and nicknames:
+            if isinstance(nicknames, str):
+                nicknames = [nicknames]
+            if not region:
+                region = g_HomeRegion.homeRegion
+            self.__prepareStatsByParamsRequest(True, [XVM_STATSBYNICK, nicknames, region], onAsyncReport, timeout)
         elif onAsyncReport:
             onAsyncReport(None)
         else:
@@ -577,9 +407,9 @@ class _XVMConsole(object):
             for accountDBID, vehCD in ids.items():
                 if vehCD != 65281:
                     requestList.append('%d=%d%s' % (accountDBID, vehCD, '=1' if not replay and accountDBID == g_UserToken.accountDBID else ''))
-            ids = ','.join(requestList)
-            url = XVM_STATSREPLAY.format(TOKEN=g_UserToken.userToken, DICT=ids) if replay else XVM_STATS.format(TOKEN=g_UserToken.userToken, DICT=ids)
-            return self.__prepareRequest(False, url, None)
+            ids = ','.join(requestList) 
+            return self.__prepareRequest(False, XVM_STATSREPLAY.format(TOKEN=g_UserToken.userToken, DICT=ids) if replay else \
+                                                XVM_STATS.format(TOKEN=g_UserToken.userToken, DICT=ids))
 
     def getStats_Async(self, ids, onAsyncReport=None):
         if g_UserToken.userToken and ids:
@@ -588,21 +418,9 @@ class _XVMConsole(object):
             for accountDBID, vehCD in ids.items():
                 if vehCD != 65281:
                     requestList.append('%d=%d%s' % (accountDBID, vehCD, '=1' if not replay and accountDBID == g_UserToken.accountDBID else ''))
-            ids = ','.join(requestList)
-            url = XVM_STATSREPLAY.format(TOKEN=g_UserToken.userToken, DICT=ids) if replay else XVM_STATS.format(TOKEN=g_UserToken.userToken, DICT=ids)
-            self.__prepareRequest(True, url, onAsyncReport)
-        elif onAsyncReport:
-            onAsyncReport(None)
-        else:
-            self.OnAsyncReports(None)
-
-    def getOnlineUsersCount(self):
-        if g_UserToken.userToken:
-            return self.__prepareRequest(False, XVM_ONLINE.format(TOKEN=g_UserToken.userToken), None)
-
-    def getOnlineUsersCount_Async(self, onAsyncReport=None):
-        if g_UserToken.userToken:
-            self.__prepareRequest(True, XVM_ONLINE.format(TOKEN=g_UserToken.userToken), onAsyncReport)
+            ids = ','.join(requestList) 
+            self.__prepareRequest(True, XVM_STATSREPLAY.format(TOKEN=g_UserToken.userToken, DICT=ids) if replay else \
+                                        XVM_STATS.format(TOKEN=g_UserToken.userToken, DICT=ids), onAsyncReport)
         elif onAsyncReport:
             onAsyncReport(None)
         else:
@@ -612,17 +430,16 @@ class _XVMStatisticsEvents(object):
     def __init__(self):
         self.OnStatsAccountBecomePlayer = Event()
         self.OnStatsBattleLoaded        = Event()
+        self.OnStatsFullBattleLoaded    = Event()
 
 # Vars .......................................................................
 
 #This is "Wargaming.net\WorldOfTanks\xvm\"-dir from the '_UserPrefs' in "xvm_main\python\userprefs.py"-module
 CACHE_PATH = path.dirname(unicode(BigWorld.wg_getPreferencesFilePath(), 'utf-8', errors='ignore')) + '/xvm/' 
 
-g_Calculator          = _Calculator()
+g_HomeRegion          = _HomeRegion()
 #'token' in "<token>.dat"-file from the cache-folder
 g_UserToken           = _UserToken()
-#"*.json.gz"-files in the cache-folder
-g_Tables              = _Tables()
 g_XVMConsole          = _XVMConsole()
 g_XVMStatisticsEvents = _XVMStatisticsEvents()
 
@@ -632,8 +449,17 @@ from hook_methods import g_overrideLib
 
 @g_overrideLib.registerEvent(PlayerAvatar, '_PlayerAvatar__startGUI')
 def new__startGUI(self):
-    if g_XVMStatisticsEvents.OnStatsBattleLoaded._delegates:
-        ids = {}
+    g_HomeRegion.setAccountDBID(getAvatarDatabaseID())
+    if g_XVMStatisticsEvents.OnStatsFullBattleLoaded._delegates:
+        IDs = []
+        for vID, vData in self.arena.vehicles.iteritems():
+            IDs.append(vData['accountDBID'])
+        if IDs:
+            g_XVMConsole.getStatsByID_Async(IDs, g_XVMStatisticsEvents.OnStatsFullBattleLoaded)
+        else:
+            g_XVMStatisticsEvents.OnStatsFullBattleLoaded(None)
+    elif g_XVMStatisticsEvents.OnStatsBattleLoaded._delegates:
+        IDs = {}
         for vID, vData in self.arena.vehicles.iteritems():
             vehCD = None
             if 'typeCompDescr' in vData:
@@ -644,9 +470,9 @@ def new__startGUI(self):
                     vehCD = vData['vehicleType'].type.compactDescr
             if vehCD is None:
                 vehCD = 0
-            ids[vData['accountDBID']] = vehCD
-        if ids:
-            g_XVMConsole.getStats_Async(ids, g_XVMStatisticsEvents.OnStatsBattleLoaded)
+            IDs[vData['accountDBID']] = vehCD
+        if IDs:
+            g_XVMConsole.getStats_Async(IDs, g_XVMStatisticsEvents.OnStatsBattleLoaded)
         else:
             g_XVMStatisticsEvents.OnStatsBattleLoaded(None)
 
@@ -656,6 +482,7 @@ def addStatsAccountBecomePlayer():
             BigWorld.callback(0.2, addStatsAccountBecomePlayer)
         else:
             g_UserToken.init()
+            g_HomeRegion.setAccountDBID(BigWorld.player().databaseID)
             if g_UserToken.errorStatus:
                 print '[%s] "xvm_statistics": %s' % (__author__, g_UserToken.errorStatus)
             elif g_XVMStatisticsEvents.OnStatsAccountBecomePlayer._delegates:
@@ -664,6 +491,3 @@ def addStatsAccountBecomePlayer():
 g_playerEvents.onAccountBecomePlayer += addStatsAccountBecomePlayer
 
 print '[%s] Loading mod: "xvm_statistics" %s (http://www.koreanrandom.com)' % (__author__, __version__)
-
-if g_Tables.errorStatus:
-    print '[%s] "xvm_statistics": %s' % (__author__, g_Tables.errorStatus)

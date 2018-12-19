@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V2.3 P2.7 W1.0.1 13.08.2018'
+__version__ = 'V2.3 P2.7 W1.2.0 22.11.2018'
 
 import BigWorld
 from Event import Event
@@ -10,6 +10,7 @@ from Avatar import PlayerAvatar
 from Vehicle import Vehicle
 from vehicle_systems.CompoundAppearance import CompoundAppearance
 from items import vehicles
+from gui.shared.gui_items.Vehicle import getVehicleClassTag
 
 # Consts .....................................................................
 
@@ -59,20 +60,20 @@ class _TanksStatistic(object):
 
     def init(self):
         self.base = {}
-        self.__allyTanksCount        = \
-        self.__enemyTanksCount       = \
-        self.__allyTeamHP            = \
-        self.__enemyTeamHP           = \
-        self.__allyTeamOneDamage     = \
-        self.__enemyTeamOneDamage    = \
-        self.__allyTeamDPM           = \
-        self.__enemyTeamDPM          = \
-        self.__allyTeamForces        = \
-        self.__enemyTeamForces       = \
-        self.__allyChance            = \
-        self.__enemyChance           = \
-        self.__allyChance            = \
-        self.__enemyChance           = None
+        self.__allyTanksCount     = \
+        self.__enemyTanksCount    = \
+        self.__allyTeamHP         = \
+        self.__enemyTeamHP        = \
+        self.__allyTeamOneDamage  = \
+        self.__enemyTeamOneDamage = \
+        self.__allyTeamDPM        = \
+        self.__enemyTeamDPM       = \
+        self.__allyTeamForces     = \
+        self.__enemyTeamForces    = \
+        self.__allyChance         = \
+        self.__enemyChance        = \
+        self.__allyChance         = \
+        self.__enemyChance        = None
 
     def update(self, reasone, vID):    
         if self.base:
@@ -165,9 +166,10 @@ def addVehicleInfo(vID, vInfo):
         g_TanksStatistic.base[vID] = tank = {}
         tank['accountDBID'] = vInfo['accountDBID']
         tank['userName'] = vInfo['name']
+        tank['tank_id'] = vType.type.compactDescr
         tank['name'] = vType.type.shortUserString.replace(' ','')
         tank['type'] = {}
-        tank['type']['tag'] = set(vehicles.VEHICLE_CLASS_TAGS & vType.type.tags).pop()
+        tank['type']['tag'] = getVehicleClassTag(vType.type.tags)
         tank['isEnemy'] = vInfo['team'] != BigWorld.player().team
         tank['isAlive'] = vInfo['isAlive']
         tank['level'] = vType.level

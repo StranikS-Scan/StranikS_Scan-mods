@@ -2,6 +2,8 @@
 
 ## List of modules:
 * "xvm_statistics" - getting statistics from the XVM-server
+* "wg_statistics" - getting statistics from the WG-server
+* "rating_calculation" - functions for calculating ratings and player scores
 * "victory_chances" - calculation of chances for victory in battle
 * "hook_methods" - system module for the Monkey patch (is similar to the code from XVM)
 
@@ -19,7 +21,7 @@ from gui.mods.xvm_statistics import g_XVMStatisticsEvents
 
   #Returns the statistics of the player during authorization in the game client,
   #if there is no data on the server or there is no connection or there is no token, it returns None
-  g_XVMStatisticsEvents.OnStatsAccountBecomePlayer(-> dict or None)
+  g_XVMStatisticsEvents.OnStatsAccountBecomePlayer(statistic -> dict or None)
     #{"b":19807,
     # "e":1462,
     # "v":{"63505":{"b":1,"w":0,"cap":0,"def":0,"dmg":52,"frg":0,"spo":0,"srv":0,"wtr":753}, ...},

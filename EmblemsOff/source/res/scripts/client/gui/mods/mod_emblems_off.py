@@ -1,6 +1,6 @@
 ﻿# -*- coding: utf-8 -*-
 
-__version__ = 'V1.7.2 P2.7 W1.0.0 09.08.2018'
+__version__ = 'V1.8.0 P2.7 W1.3.0 19.12.2018'
 __author__  = 'StranikS_Scan'
 
 import BigWorld
@@ -11,19 +11,12 @@ from os import path, walk, remove
 # Хук на аттач эмблем --------------------------------------------------------------
 
 def new_attachStickers(self, model, parentNode, isDamaged, toPartRootMatrix=None):
-    self.detachStickers()
-    self._ModelStickers__model = model
-    if toPartRootMatrix is not None:
-        self.__toPartRootMatrix = toPartRootMatrix
-    self._ModelStickers__parentNode = parentNode
-    self._ModelStickers__isDamaged = isDamaged
-    self._ModelStickers__stickerModel.setupSuperModel(self._ModelStickers__model, self._ModelStickers__toPartRootMatrix)
-    self._ModelStickers__parentNode.attach(self._ModelStickers__stickerModel)
-    for slotType, slots in self._ModelStickers__slotsByType.iteritems():
-        if slotType != SlotTypes.CLAN:
-            self._ModelStickers__doAttachStickers(slotType)
-    return
+    old_attachStickers(self, model, parentNode, isDamaged, toPartRootMatrix)
+    for slotType, stickerPack in self._ModelStickers__stickerPacks.iteritems():
+        if slotType == SlotTypes.CLAN:
+            stickerPack.detach(self._ModelStickers__componentIdx, self._ModelStickers__stickerModel)
 
+old_attachStickers = ModelStickers.attachStickers
 ModelStickers.attachStickers = new_attachStickers
 
 # Хук на скачивание эмблем кланов --------------------------------------------------

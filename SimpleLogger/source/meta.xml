@@ -1,6 +1,6 @@
 <root>
     <id>mod.SimpleLogger</id>
-    <version>1.0.6</version>
+    <version>1.1.0</version>
     <name>SimpleLogger</name>
     <description>Mod records various information about battles, vehicles, players in CSV-files</description>
 </root>

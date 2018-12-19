@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V2.3 P2.7 W1.2.0 14.11.2018'
+__version__ = 'V2.4 P2.7 W1.2.0 26.11.2018'
 
 import BigWorld, Event, BattleReplay, Keys
 from gui.Scaleform.framework.entities.BaseDAAPIComponent import BaseDAAPIComponent
@@ -255,10 +255,6 @@ def showStat(stat, changeID=None):
                         label.getSimpleTextWithTags(getShowOneStat(stat.base[vID]))
         label.HtmlText(info)
 
-# Hooks ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-from gui.mods.hook_methods import g_overrideLib
-
 def onVehiclesChanged(statistic, reasone, vID):
     showStat(statistic, vID if reasone != UPDATE_REASONE.VEHICLE_ADDED else None)
     if reasone != UPDATE_REASONE.VEHICLE_ADDED:
@@ -341,11 +337,14 @@ except:
     print '[%s] Loading mod: Not found "gambiter.flash" module, loading stoped!' % __author__
 else:
     try:
+        from gui.mods.hook_methods import g_overrideLib
         from gui.mods.victory_chances import g_StatisticEvents, g_TanksStatistic, UPDATE_REASONE
     except:
         print '[%s] Loading mod: Not found "victory_chances" module, loading stoped!' % __author__
     else:
         g_StatisticEvents.OnBattleLoaded += onBattleLoaded
+
+        # Hooks ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
         @g_overrideLib.registerEvent(PlayerAvatar, '_PlayerAvatar__destroyGUI', True, True)
         def new__destroyGUI(self):
