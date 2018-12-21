@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V2.3 P2.7 W1.2.0 22.11.2018'
+__version__ = 'V2.4 P2.7 W1.3.0 21.12.2018'
 
 import BigWorld
 from Event import Event
@@ -109,11 +109,11 @@ class _TanksStatistic(object):
             self.__allyChance  = 100 * self.__allyTeamForces  / allForces if allForces != 0 else 0
             self.__enemyChance = 100 * self.__enemyTeamForces / allForces if allForces != 0 else 0
             #Events -----------------------------------------------------------
-            g_StatisticEvents.OnVehiclesChanged(statistic=self, reasone=reasone, vID=vID)
+            g_StatisticEvents.OnVehiclesChanged(self, reasone, vID)
             if reasone <= UPDATE_REASONE.VEHICLE_DEATH:
-                g_StatisticEvents.OnCountChanged(count=(self.__allyTanksCount, self.__enemyTanksCount))
-            g_StatisticEvents.OnHealthChanged(health=(self.__allyTeamHP, self.__enemyTeamHP))
-            g_StatisticEvents.OnChanceChanged(chances=(self.__allyChance, self.__enemyChance), forces=(self.__allyTeamForces, self.__enemyTeamForces))
+                g_StatisticEvents.OnCountChanged(self.__allyTanksCount, self.__enemyTanksCount)
+            g_StatisticEvents.OnHealthChanged(self.__allyTeamHP, self.__enemyTeamHP)
+            g_StatisticEvents.OnChanceChanged(self.__allyChance, self.__enemyChance, self.__allyTeamForces, self.__enemyTeamForces)
 
 # Vars .......................................................................
 
@@ -191,8 +191,8 @@ def addVehicleInfo(vID, vInfo):
         #Shells -------------------------
         for shot in vType.gun.shots:
             tag = 'APRC' if shot.shell.kind == SHELL_TYPES.ARMOR_PIERCING_CR else \
-                  'HC'   if shot.shell.kind == SHELL_TYPES.HOLLOW_CHARGE else \
-                  'HE'   if shot.shell.kind == SHELL_TYPES.HIGH_EXPLOSIVE else 'AP'
+                  'HC'   if shot.shell.kind == SHELL_TYPES.HOLLOW_CHARGE     else \
+                  'HE'   if shot.shell.kind == SHELL_TYPES.HIGH_EXPLOSIVE    else 'AP'
             tank['gun']['caliber'] = shot.shell.caliber
             damage = float(shot.shell.damage[0])
             if damage > tank['gun']['shell'][tag]['damage']:
@@ -202,9 +202,9 @@ def addVehicleInfo(vID, vInfo):
         if 'SPG' == tank['type']['tag']:
             shell = 'HE'
         else:
-            shell = 'AP' if tank['gun']['shell']['AP']['damage'] > 0 else \
+            shell = 'AP'   if tank['gun']['shell']['AP']['damage'] > 0   else \
                     'APRC' if tank['gun']['shell']['APRC']['damage'] > 0 else \
-                    'HC' if tank['gun']['shell']['HC']['damage'] > 0 else 'HE'
+                    'HC'   if tank['gun']['shell']['HC']['damage'] > 0   else 'HE'
         tank['gun']['currentShell']  = shell
         tank['gun']['currentDamage'] = tank['gun']['shell'][shell]['damage']
         tank['gun']['currentDpm']    = tank['gun']['shell'][shell]['dpm']
@@ -224,6 +224,6 @@ def new__startGUI(self):
     g_TanksStatistic.init()
     for vID in self.arena.vehicles:
         addVehicleInfo(vID, self.arena.vehicles.get(vID))
-    g_StatisticEvents.OnBattleLoaded(statistic=g_TanksStatistic)
+    g_StatisticEvents.OnBattleLoaded(g_TanksStatistic)
 
 print '[%s] Loading mod: "victory_chances" %s (http://www.koreanrandom.com)' % (__author__, __version__)

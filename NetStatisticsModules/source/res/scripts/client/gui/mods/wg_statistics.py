@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V1.1 P2.7 W1.2.0 07.12.2018'
+__version__ = 'V1.2 P2.7 W1.3.0 21.12.2018'
 
 import BigWorld
 from Event import Event
@@ -14,7 +14,7 @@ from constants import CURRENT_REALM, DEFAULT_LANGUAGE
 
 from os import path, makedirs
 import cPickle, threading
-
+from copy import deepcopy
 from http_methods import loadJsonUrl
 from time import sleep
 
@@ -128,7 +128,12 @@ class _WGConsole(object):
             if onAsyncReport:
                 onAsyncReport(answer)
             else:
-                self.OnAsyncReports(answer)
+                if len(self.OnAsyncReports._delegates) > 1:
+                    for delegate in self.OnAsyncReports._delegates[0:-1]:
+                        delegate(deepcopy(answer))
+                    self.OnAsyncReports._delegates[-1](answer)
+                else:
+                    self.OnAsyncReports(answer)
         return answer
 
     def getOnlineUsersCount(self, region=''):
@@ -286,7 +291,12 @@ class _WGConsole(object):
             if onAsyncReport:
                 onAsyncReport(players)
             else:
-                self.OnAsyncReports(players)
+                if len(self.OnAsyncReports._delegates) > 1:
+                    for delegate in self.OnAsyncReports._delegates[0:-1]:
+                        delegate(deepcopy(players))
+                    self.OnAsyncReports._delegates[-1](players)
+                else:
+                    self.OnAsyncReports(players)
         return players
 
     #This is an analog "getStats" in xvm_statistics
@@ -360,7 +370,12 @@ class _WGConsole(object):
             if onAsyncReport:
                 onAsyncReport(players)
             else:
-                self.OnAsyncReports(players)
+                if len(self.OnAsyncReports._delegates) > 1:
+                    for delegate in self.OnAsyncReports._delegates[0:-1]:
+                        delegate(deepcopy(players))
+                    self.OnAsyncReports._delegates[-1](players)
+                else:
+                    self.OnAsyncReports(players)
         return players
 
     #This is an analog "getStatsByID" from xvm_statistics with a request for multiple players
@@ -400,27 +415,51 @@ from hook_methods import g_overrideLib
 @g_overrideLib.registerEvent(PlayerAvatar, '_PlayerAvatar__startGUI')
 def new__startGUI(self):
     g_HomeRegion.setAccountDBID(getAvatarDatabaseID())
+    IDs = {}
+    for vID, vData in self.arena.vehicles.iteritems():
+        vehCD = None
+        if 'typeCompDescr' in vData:
+            vehCD = vData['typeCompDescr']
+        elif 'vehicleType' in vData:
+            vtype = vData['vehicleType']
+            if hasattr(vtype, 'type'):
+                vehCD = vData['vehicleType'].type.compactDescr
+        if vehCD is None:
+            vehCD = 0
+        IDs[vData['accountDBID']] = vehCD
     if g_WGStatisticsEvents.OnStatsFullBattleLoaded._delegates:
-        IDs = []
-        for vID, vData in self.arena.vehicles.iteritems():
-            IDs.append(vData['accountDBID'])
         if IDs:
-            g_WGConsole.getStatsFull_Async(IDs, g_WGStatisticsEvents.OnStatsFullBattleLoaded)
+            if g_WGStatisticsEvents.OnStatsBattleLoaded._delegates:
+
+                def OnStats(statistic):
+                    stats = deepcopy(statistic) if statistic else None
+                    player = BigWorld.player()
+                    if stats and 'players' in stats:
+                        for user in stats['players']:
+                            ID = user.get('account_id', 0)
+                            if ID in IDs and 'vehicles' in user:
+                                user['vehicles'] = user['vehicles'].get(IDs[ID], {})
+                    if len(g_WGStatisticsEvents.OnStatsBattleLoaded._delegates) > 1:
+                        for delegate in g_WGStatisticsEvents.OnStatsBattleLoaded._delegates[0:-1]:
+                            delegate(deepcopy(stats))
+                        g_WGStatisticsEvents.OnStatsBattleLoaded._delegates[-1](stats)
+                    else:
+                        g_WGStatisticsEvents.OnStatsBattleLoaded(stats)
+                    if len(g_WGStatisticsEvents.OnStatsFullBattleLoaded._delegates) > 1:
+                        for delegate in g_WGStatisticsEvents.OnStatsFullBattleLoaded._delegates[0:-1]:
+                            delegate(deepcopy(statistic))
+                        g_WGStatisticsEvents.OnStatsFullBattleLoaded._delegates[-1](statistic)
+                    else:
+                        g_WGStatisticsEvents.OnStatsFullBattleLoaded(statistic)
+
+                g_WGConsole.getStatsFull_Async(IDs.keys(), OnStats)
+            else:
+                g_WGConsole.getStatsFull_Async(IDs.keys(), g_WGStatisticsEvents.OnStatsFullBattleLoaded)
         else:
+            if g_WGStatisticsEvents.OnStatsBattleLoaded._delegates:
+                g_WGStatisticsEvents.OnStatsBattleLoaded(None)
             g_WGStatisticsEvents.OnStatsFullBattleLoaded(None)
     elif g_WGStatisticsEvents.OnStatsBattleLoaded._delegates:
-        IDs = {}
-        for vID, vData in self.arena.vehicles.iteritems():
-            vehCD = None
-            if 'typeCompDescr' in vData:
-                vehCD = vData['typeCompDescr']
-            elif 'vehicleType' in vData:
-                vtype = vData['vehicleType']
-                if hasattr(vtype, 'type'):
-                    vehCD = vData['vehicleType'].type.compactDescr
-            if vehCD is None:
-                vehCD = 0
-            IDs[vData['accountDBID']] = vehCD
         if IDs:
             g_WGConsole.getStats_Async(IDs, g_WGStatisticsEvents.OnStatsBattleLoaded)
         else:
@@ -435,7 +474,7 @@ def addStatsAccountBecomePlayer():
             if g_HomeRegion.accountDBID == 0:
                 print '[%s] "wg_statistics": Invalid accountDBID, you must re-enter the game client!' % __author__
             elif g_WGStatisticsEvents.OnStatsAccountBecomePlayer._delegates:
-                g_WGConsole.getStatsByID_Async(g_HomeRegion.accountDBID, [], [], g_WGStatisticsEvents.OnStatsAccountBecomePlayer)
+                g_WGConsole.getStatsFull_Async(g_HomeRegion.accountDBID, g_WGStatisticsEvents.OnStatsAccountBecomePlayer)
 
 g_playerEvents.onAccountBecomePlayer += addStatsAccountBecomePlayer
 

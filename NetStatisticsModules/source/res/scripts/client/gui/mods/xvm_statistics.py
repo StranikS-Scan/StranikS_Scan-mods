@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V2.0 P2.7 W1.2.0 07.12.2018'
+__version__ = 'V2.1 P2.7 W1.3.0 21.12.2018'
 
 import BigWorld
 from Event import Event
@@ -14,7 +14,7 @@ from constants import CURRENT_REALM, DEFAULT_LANGUAGE
 
 from os import path, makedirs
 import cPickle, threading
-
+from copy import deepcopy
 from http_methods import loadJsonUrl
 from time import sleep
 
@@ -305,7 +305,12 @@ class _XVMConsole(object):
             if onAsyncReport:
                 onAsyncReport(answer)
             else:
-                self.OnAsyncReports(answer)
+                if len(self.OnAsyncReports._delegates) > 1:
+                    for delegate in self.OnAsyncReports._delegates[0:-1]:
+                        delegate(deepcopy(answer))
+                    self.OnAsyncReports._delegates[-1](answer)
+                else:
+                    self.OnAsyncReports(answer)
         return answer
 
     def getVersion(self):
@@ -357,7 +362,12 @@ class _XVMConsole(object):
             if onAsyncReport:
                 onAsyncReport(players)
             else:
-                self.OnAsyncReports(players)
+                if len(self.OnAsyncReports._delegates) > 1:
+                    for delegate in self.OnAsyncReports._delegates[0:-1]:
+                        delegate(deepcopy(players))
+                    self.OnAsyncReports._delegates[-1](players)
+                else:
+                    self.OnAsyncReports(players)
         return players
 
     #IDs=[2365719, 34483, accountDBID, ...] or 2365719 only
@@ -450,27 +460,51 @@ from hook_methods import g_overrideLib
 @g_overrideLib.registerEvent(PlayerAvatar, '_PlayerAvatar__startGUI')
 def new__startGUI(self):
     g_HomeRegion.setAccountDBID(getAvatarDatabaseID())
+    IDs = {}
+    for vID, vData in self.arena.vehicles.iteritems():
+        vehCD = None
+        if 'typeCompDescr' in vData:
+            vehCD = vData['typeCompDescr']
+        elif 'vehicleType' in vData:
+            vtype = vData['vehicleType']
+            if hasattr(vtype, 'type'):
+                vehCD = vData['vehicleType'].type.compactDescr
+        if vehCD is None:
+            vehCD = 0
+        IDs[vData['accountDBID']] = vehCD
     if g_XVMStatisticsEvents.OnStatsFullBattleLoaded._delegates:
-        IDs = []
-        for vID, vData in self.arena.vehicles.iteritems():
-            IDs.append(vData['accountDBID'])
         if IDs:
-            g_XVMConsole.getStatsByID_Async(IDs, g_XVMStatisticsEvents.OnStatsFullBattleLoaded)
+            if g_XVMStatisticsEvents.OnStatsBattleLoaded._delegates:
+
+                def OnStats(statistic):
+                    stats = deepcopy(statistic) if statistic else None
+                    player = BigWorld.player()
+                    if stats and 'players' in stats:
+                        for user in stats['players']:
+                            ID = user.get('_id', 0)
+                            if ID in IDs and 'v' in user:
+                                user['v'] = user['v'].get(str(IDs[ID]), {})
+                    if len(g_XVMStatisticsEvents.OnStatsBattleLoaded._delegates) > 1:
+                        for delegate in g_XVMStatisticsEvents.OnStatsBattleLoaded._delegates[0:-1]:
+                            delegate(deepcopy(stats))
+                        g_XVMStatisticsEvents.OnStatsBattleLoaded._delegates[-1](stats)
+                    else:
+                        g_XVMStatisticsEvents.OnStatsBattleLoaded(stats)
+                    if len(g_XVMStatisticsEvents.OnStatsFullBattleLoaded._delegates) > 1:
+                        for delegate in g_XVMStatisticsEvents.OnStatsFullBattleLoaded._delegates[0:-1]:
+                            delegate(deepcopy(statistic))
+                        g_XVMStatisticsEvents.OnStatsFullBattleLoaded._delegates[-1](statistic)
+                    else:
+                        g_XVMStatisticsEvents.OnStatsFullBattleLoaded(statistic)
+
+                g_XVMConsole.getStatsByID_Async(IDs.keys(), OnStats)
+            else:
+                g_XVMConsole.getStatsByID_Async(IDs.keys(), g_XVMStatisticsEvents.OnStatsFullBattleLoaded)
         else:
+            if g_XVMStatisticsEvents.OnStatsBattleLoaded._delegates:
+                g_XVMStatisticsEvents.OnStatsBattleLoaded(None)
             g_XVMStatisticsEvents.OnStatsFullBattleLoaded(None)
     elif g_XVMStatisticsEvents.OnStatsBattleLoaded._delegates:
-        IDs = {}
-        for vID, vData in self.arena.vehicles.iteritems():
-            vehCD = None
-            if 'typeCompDescr' in vData:
-                vehCD = vData['typeCompDescr']
-            elif 'vehicleType' in vData:
-                vtype = vData['vehicleType']
-                if hasattr(vtype, 'type'):
-                    vehCD = vData['vehicleType'].type.compactDescr
-            if vehCD is None:
-                vehCD = 0
-            IDs[vData['accountDBID']] = vehCD
         if IDs:
             g_XVMConsole.getStats_Async(IDs, g_XVMStatisticsEvents.OnStatsBattleLoaded)
         else:
