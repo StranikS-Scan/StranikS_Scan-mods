@@ -403,7 +403,7 @@ class _Calculator(object):
                     normDEF = max(0, min(normDAM + 0.1, (weiDEF - 0.10) / (1 - 0.10) ))
                     return 980*normDAM + 210*normDAM*normFRG + 155*normFRG*normSPO + 75*normDEF*normFRG + 145*min(1.8, normWIR)
 
-    #Total rating by account
+    #Total rating by account, see https://koreanrandom.com/forum/topic/23829-
     #params = {'id': {'b':int, 'dmg': int, 'frg': int}, 'id':{...}, ...}}
     def XTE(self, params):
         if isinstance(params, dict):

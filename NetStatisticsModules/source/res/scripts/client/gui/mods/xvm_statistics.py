@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V2.1 P2.7 W1.3.0 21.12.2018'
+__version__ = 'V2.2 P2.7 W1.3.0 26.12.2018'
 
 import BigWorld
 from Event import Event
@@ -145,25 +145,35 @@ class _UserToken(object):
             elif stats:
                 self.__userToken = stats.get('token','')
                 if self.__userToken:
-                    self.__saveLocalToken()
-            #V2. Search and check the token in the local database for use without activation on the website
-            if not self.__userToken:
-                self.__userToken = self.__tokensBase.get(self.__accountDBID, '')
-                if self.__userToken:
-                    stats = loadJsonUrl(XVM_GETTOKEN.format(TOKEN=self.__userToken, ID=self.__accountDBID))
-                    if stats is None:
-                        self.__error = TOKEN_ERRORS.NOT_CONNECTION
-                    elif not stats or stats.get('status', None) in [None, 'inactive']:
-                        self.__userToken = ''
-            #V3. Search and check the token from the cache
+                    self.__saveLocalToken(stats)
+            #V2. Search and check the token from the cache
             if not self.__userToken:
                 self.__userToken = self.__getLocalToken()
                 if self.__userToken:
                     stats = loadJsonUrl(XVM_GETTOKEN.format(TOKEN=self.__userToken, ID=self.__accountDBID))
                     if stats is None:
+                        self.__userToken = ''
                         self.__error = TOKEN_ERRORS.NOT_CONNECTION
-                    elif not stats or stats.get('status', None) in [None, 'inactive']:
+                        return
+                    elif not stats or stats.get('status', None) in (None, 'inactive'):
+                        if self.__accountDBID in self.__tokensBase:
+                            self.__tokensBase.pop(self.__accountDBID)
+                        self.__userToken = ''
+            #V3. Search and check the token in the local database for use without activation on the website
+            if not self.__userToken:
+                self.__userToken = self.__tokensBase.get(self.__accountDBID, '')
+                if self.__userToken:
+                    stats = loadJsonUrl(XVM_GETTOKEN.format(TOKEN=self.__userToken, ID=self.__accountDBID))
+                    if stats is None:
+                        self.__userToken = ''
+                        self.__error = TOKEN_ERRORS.NOT_CONNECTION
+                        return
+                    elif not stats or stats.get('status', None) in (None, 'inactive'):
+                        self.__tokensBase.pop(self.__accountDBID)
+                        self.__userToken = ''
                         self.__error = TOKEN_ERRORS.NEED_ACTIVATION
+                    else:
+                        self.__saveLocalToken(stats)
                 else:
                     self.__error = TOKEN_ERRORS.NEED_ACTIVATION
             #Save the token in the local database
@@ -233,23 +243,26 @@ class _UserToken(object):
                 pass
         return ''
 
-    def __saveLocalToken(self):
+    def __saveLocalToken(self, stats=None):
         filename = CACHE_PATH + 'tokens/%d.dat' % self.__accountDBID
         dirname = path.dirname(filename)
         try:
             if not path.exists(dirname):
                 makedirs(dirname)
-            userToken = {}
-            if path.exists(filename):
-                try:
-                    with open(filename, 'rb') as f:
-                        localToken = cPickle.loads(f.read())
-                        if isinstance(localToken, dict):
-                            userToken = localToken
-                except:
-                    pass
+            if stats:
+                userToken = stats
+            else:
+                userToken = {}
+                if path.exists(filename):
+                    try:
+                        with open(filename, 'rb') as f:
+                            localToken = cPickle.loads(f.read())
+                            if isinstance(localToken, dict):
+                                userToken = localToken
+                    except:
+                        pass
             userToken['accountDBID'] = self.__accountDBID
-            userToken['token']       = self.__userToken
+            userToken['token']       = self.__userToken 
             with open(filename, 'wb') as f:
                 f.write(cPickle.dumps(userToken))
             return True
