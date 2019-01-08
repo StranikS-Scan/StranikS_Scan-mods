@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V1.2 P2.7 W1.3.0 21.12.2018'
+__version__ = 'V1.3 P2.7 W1.3.0 08.01.2019'
 
 import BigWorld
 from Event import Event
@@ -19,11 +19,12 @@ from http_methods import loadJsonUrl
 from time import sleep
 
 from rating_calculation import g_Calculator
+from api_tokens import API_TOKENS
+
+#Mix tokens
+API_TOKENS.RANDOMIZE()
 
 # Consts .....................................................................
-
-#Registered token on the WG-servers for the NSM
-API_TOKEN = '76f79f28cc829699fe6225c90b7bda28'
 
 #Servers in different regions
 REGION_RU = 'ru'
@@ -41,20 +42,20 @@ API_SERVERS    = '/wgn/servers/info/?application_id={TOKEN}&game=wot'
 #Search player accountDBID by his nickname, example:
 #---> https://api.worldoftanks.ru/wot/account/list/?application_id=76f79f28cc829699fe6225c90b7bda28&search=StranikS_Scan
 #{"status":"ok","meta":{"count":1},"data":[{"nickname":"StranikS_Scan","account_id":2365719}]}
-WG_IDBYNICK = WG_SERVER + API_USERS.format(TOKEN=API_TOKEN, REQ='search={NICK}')
+WG_IDBYNICK = WG_SERVER + API_USERS.format(TOKEN=API_TOKENS.CURRENT, REQ='search={NICK}')
 API_IDBYNICK_FIELDS = '&fields={FIELDS}'
 API_IDBYNICK_LIMIT  = '&limit={LIMIT}' #0-100
 
 #Finding player accountDBIDs by their names, example:
 #---> https://api.worldoftanks.ru/wot/account/list/?application_id=76f79f28cc829699fe6225c90b7bda28&search=StranikS_Scan,spoter&type=exact
 #{"status":"ok","meta":{"count":2},"data":[{"nickname":"spoter","account_id":34483},{"nickname":"StranikS_Scan","account_id":2365719}]}
-WG_IDSBYNICKS = WG_SERVER + API_USERS.format(TOKEN=API_TOKEN, REQ='search={NICKS}&type=exact')
+WG_IDSBYNICKS = WG_SERVER + API_USERS.format(TOKEN=API_TOKENS.CURRENT, REQ='search={NICKS}&type=exact')
 API_IDSBYNICKS_FIELDS = '&fields={FIELDS}'
 
 #Get total statistics of one or more players by their accountDBID, example:
 #----> https://api.worldoftanks.ru/wot/account/info/?application_id=76f79f28cc829699fe6225c90b7bda28&account_id=2365719,34483
 #{"status":"ok","meta":{"count":2},"data":{"34483": {"client_language":"ru",...}, "2365719": {"client_language":"ru",...}}}
-WG_USERSSTATS = WG_SERVER + API_USERSINFO.format(TOKEN=API_TOKEN, REQ='account_id={IDS}')
+WG_USERSSTATS = WG_SERVER + API_USERSINFO.format(TOKEN=API_TOKENS.CURRENT, REQ='account_id={IDS}')
 API_USERSSTATS_EXTRA  = '&extra={EXTRA}'
 API_USERSSTATS_FIELDS = '&fields={FIELDS}'
 
@@ -62,14 +63,14 @@ API_USERSSTATS_FIELDS = '&fields={FIELDS}'
 #----> https://api.worldoftanks.ru/wot/account/tanks/?application_id=76f79f28cc829699fe6225c90b7bda28&account_id=2365719,34483
 #{"status":"ok","meta":{"count":2},"data":{"34483":[{"statistics":{"wins":748,"battles":1357},"mark_of_mastery":4,"tank_id":53249},...], 
 #                                          "2365719":[{"statistics":{"wins":686,"battles":1259},"mark_of_mastery":4,"tank_id":54289},...]}}
-WG_USERSTANKS = WG_SERVER + API_USERSTANKS.format(TOKEN=API_TOKEN, REQ='account_id={IDS}')
+WG_USERSTANKS = WG_SERVER + API_USERSTANKS.format(TOKEN=API_TOKENS.CURRENT, REQ='account_id={IDS}')
 API_USERSTANKS_FIELDS = '&fields={FIELDS}'
 
 #Get detailed statistics for each player's tank by accountDBID, example:
 #---> https://api.worldoftanks.ru/wot/tanks/stats/?application_id=76f79f28cc829699fe6225c90b7bda28&account_id=2365719
 #{"status":"ok","meta":{"count":1},"data":{"2365719":[{"tank_id":769,"account_id":2365719,"max_xp":576,"max_frags":1,
 #                                                      "frags":null,"mark_of_mastery":0,"in_garage":null,"clan":{"spotted":17,...},"all":{"spotted":17,...},...}]}}
-WG_TANKS = WG_SERVER + API_TANKS.format(TOKEN=API_TOKEN, REQ='account_id={ID}')
+WG_TANKS = WG_SERVER + API_TANKS.format(TOKEN=API_TOKENS.CURRENT, REQ='account_id={ID}')
 API_TANKS_TANKIDS = '&tank_id={IDS}'
 API_TANKS_EXTRA   = '&extra={EXTRA}'
 API_TANKS_FIELDS  = '&fields={FIELDS}'
@@ -77,7 +78,7 @@ API_TANKS_FIELDS  = '&fields={FIELDS}'
 #Get online WOT-server statistics, example:
 #---> https://api.worldoftanks.eu/wgn/servers/info/?application_id=76f79f28cc829699fe6225c90b7bda28&game=wot
 #{"status":"ok","data":{"wot":[{"players_online":46579,"server":"EU2"},{"players_online":74296,"server":"EU1"}]}}
-WG_ONLINE = WG_SERVER + API_SERVERS.format(TOKEN=API_TOKEN)
+WG_ONLINE = WG_SERVER + API_SERVERS.format(TOKEN=API_TOKENS.CURRENT)
 
 # Static functions ***********************************************************
 

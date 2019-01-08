@@ -1,5 +1,8 @@
 ﻿# -*- coding: utf-8 -*-
 
+__author__  = 'StranikS_Scan'
+__version__ = 'V1.1 P2.7 W1.2.0 25.11.2018'
+
 import json, urllib2
 
 STATUS_ERRORS = frozenset(['error', 'badRequest', 'badToken'])
