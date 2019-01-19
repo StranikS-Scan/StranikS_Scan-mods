@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V1.1.0 P2.7 W1.2.0 08.12.2018'
+__version__ = 'V1.1.0 P2.7 W1.3.0 18.01.2019'
 
 import BigWorld, Event
 from BattleReplay import g_replayCtrl
@@ -22,6 +22,8 @@ from datetime import datetime
 from Math import Matrix
 
 # Consts and Vars ..........................................................................
+
+APPLICATION_ID = 'eJwzTExNMTFKTDU2szRITTUwT7EwMzSzSEwyMjcxtDRLMgUAk5oIkw=='.decode('base64').decode('zlib')
 
 CSV_VERSION = '1.3'
 
@@ -196,7 +198,7 @@ def onXVMBattleLoaded(statistic):
             PLAYERS_STAT_COLLECT.clear()
 
 try:
-    from gui.mods.hook_methods import g_overrideLib
+    from gui.mods.methods.hook import g_overrideLib
     from gui.mods.xvm_statistics import g_XVMStatisticsEvents
     from gui.mods.wg_statistics import g_WGStatisticsEvents
     from gui.mods.victory_chances import g_StatisticEvents, g_TanksStatistic
@@ -204,9 +206,9 @@ try:
 except:
     print '[%s] Loading mod: Not found "mod.NetStatisticsModules", loading stoped!' % __author__
 else:
-    g_WGStatisticsEvents.OnStatsFullBattleLoaded += onWGBattleLoaded
-    g_XVMStatisticsEvents.OnStatsBattleLoaded += onXVMBattleLoaded
-    g_StatisticEvents.OnBattleLoaded += onBattleLoaded
+    g_WGStatisticsEvents.addStatsFullBattleLoaded(APPLICATION_ID, onWGBattleLoaded)
+    g_XVMStatisticsEvents.addStatsBattleLoaded(APPLICATION_ID, onXVMBattleLoaded)
+    g_StatisticEvents.onBattleLoaded += onBattleLoaded
 
     CONFIG_FILENAME = getConfigFileName()
     if CONFIG_FILENAME is not None:

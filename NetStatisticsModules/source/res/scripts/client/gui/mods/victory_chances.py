@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V2.4 P2.7 W1.3.0 21.12.2018'
+__version__ = 'V2.5 P2.7 W1.3.0 18.01.2019'
 
 import BigWorld
 from Event import Event
@@ -11,6 +11,8 @@ from Vehicle import Vehicle
 from vehicle_systems.CompoundAppearance import CompoundAppearance
 from items import vehicles
 from gui.shared.gui_items.Vehicle import getVehicleClassTag
+
+from methods.hook import g_overrideLib
 
 # Consts .....................................................................
 
@@ -25,11 +27,11 @@ class UPDATE_REASONE():
 
 class _StatisticEvents(object):
     def __init__(self):
-        self.OnBattleLoaded    = Event()
-        self.OnVehiclesChanged = Event()
-        self.OnCountChanged    = Event()
-        self.OnHealthChanged   = Event()
-        self.OnChanceChanged   = Event()
+        self.onBattleLoaded    = Event()
+        self.onVehiclesChanged = Event()
+        self.onCountChanged    = Event()
+        self.onHealthChanged   = Event()
+        self.onChanceChanged   = Event()
 
 class _TanksStatistic(object):
     allyChance         = property(lambda self: self.__allyChance)
@@ -109,11 +111,11 @@ class _TanksStatistic(object):
             self.__allyChance  = 100 * self.__allyTeamForces  / allForces if allForces != 0 else 0
             self.__enemyChance = 100 * self.__enemyTeamForces / allForces if allForces != 0 else 0
             #Events -----------------------------------------------------------
-            g_StatisticEvents.OnVehiclesChanged(self, reasone, vID)
+            g_StatisticEvents.onVehiclesChanged(self, reasone, vID)
             if reasone <= UPDATE_REASONE.VEHICLE_DEATH:
-                g_StatisticEvents.OnCountChanged(self.__allyTanksCount, self.__enemyTanksCount)
-            g_StatisticEvents.OnHealthChanged(self.__allyTeamHP, self.__enemyTeamHP)
-            g_StatisticEvents.OnChanceChanged(self.__allyChance, self.__enemyChance, self.__allyTeamForces, self.__enemyTeamForces)
+                g_StatisticEvents.onCountChanged(self.__allyTanksCount, self.__enemyTanksCount)
+            g_StatisticEvents.onHealthChanged(self.__allyTeamHP, self.__enemyTeamHP)
+            g_StatisticEvents.onChanceChanged(self.__allyChance, self.__enemyChance, self.__allyTeamForces, self.__enemyTeamForces)
 
 # Vars .......................................................................
 
@@ -121,8 +123,6 @@ g_TanksStatistic  = _TanksStatistic()
 g_StatisticEvents = _StatisticEvents()
 
 # Hooks ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-from hook_methods import g_overrideLib
 
 @g_overrideLib.registerEvent(Vehicle, 'onHealthChanged')
 def new_onHealthChanged(self, *a, **k):
@@ -224,6 +224,6 @@ def new__startGUI(self):
     g_TanksStatistic.init()
     for vID in self.arena.vehicles:
         addVehicleInfo(vID, self.arena.vehicles.get(vID))
-    g_StatisticEvents.OnBattleLoaded(g_TanksStatistic)
+    g_StatisticEvents.onBattleLoaded(g_TanksStatistic)
 
 print '[%s] Loading mod: "victory_chances" %s (http://www.koreanrandom.com)' % (__author__, __version__)

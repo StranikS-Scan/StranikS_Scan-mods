@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V1.1 P2.7 W1.3.0 21.12.2018'
+__version__ = 'V1.1 P2.7 W1.3.0 18.01.2019'
 
 import BigWorld
 from items import vehicles
@@ -12,7 +12,7 @@ from StringIO import StringIO
 import json, gzip, cPickle
 from math import log, ceil
 
-from http_methods import loadUrl
+from methods.http import loadUrl
 
 # Consts .....................................................................
 
@@ -143,7 +143,7 @@ class _Tables(object):
         if self.__error == TABLE_ERRORS.NOT_READED:
             return 'One or more tables are not read from disk!'
         elif self.__error == TABLE_ERRORS.NOT_UPDATED:
-            return 'One or more tables are not updated from the XVM-site!'       
+            return 'One or more tables are not updated from the XVM-website!'       
         return ''
 
 class _Calculator(object):

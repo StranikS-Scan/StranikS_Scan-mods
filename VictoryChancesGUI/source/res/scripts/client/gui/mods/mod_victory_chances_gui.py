@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V2.4 P2.7 W1.2.0 26.11.2018'
+__version__ = 'V2.4 P2.7 W1.2.0 18.01.2019'
 
 import BigWorld, Event, BattleReplay, Keys
 from gui.Scaleform.framework.entities.BaseDAAPIComponent import BaseDAAPIComponent
@@ -52,7 +52,7 @@ GUI_TEXT  = {'Name': 'VictoryChancesGUI',
 
 import GUI
 
-def _posAlignment(x, y, align, isScreen = False):
+def _posAlignment(x, y, align, isScreen=False):
     screenWidth, screenHeight = GUI.screenResolution()
     if align[0] == 'center':
         x = x - screenWidth // 2 if isScreen else screenWidth // 2 + x
@@ -92,7 +92,7 @@ class FlashTextLabel(object):
         g_guiFlash.createComponent(self.name, COMPONENT_TYPE.LABEL, options)
         COMPONENT_EVENT.UPDATED += self.updatePosition
 
-    def __del__(self):
+    def destroy(self):
         COMPONENT_EVENT.UPDATED -= self.updatePosition
         g_guiFlash.deleteComponent(self.name)
 
@@ -306,7 +306,7 @@ def onBattleLoaded(statistic):
             InputHandler.g_instance.onKeyDown += onShowHideTanksList
             InputHandler.g_instance.onKeyUp   += onShowHideTanksList
         #Statistic ---------------------------------------
-        g_StatisticEvents.OnVehiclesChanged += onVehiclesChanged
+        g_StatisticEvents.onVehiclesChanged += onVehiclesChanged
         showStat(statistic)
         printStrings(('------------------------- %s -------------------------\n' % datetime.now().strftime('%d.%m.%y %H:%M:%S'), '\nReason: BattleLoading\n\n')) 
         printStat(statistic, True)
@@ -337,12 +337,12 @@ except:
     print '[%s] Loading mod: Not found "gambiter.flash" module, loading stoped!' % __author__
 else:
     try:
-        from gui.mods.hook_methods import g_overrideLib
+        from gui.mods.methods.hook import g_overrideLib
         from gui.mods.victory_chances import g_StatisticEvents, g_TanksStatistic, UPDATE_REASONE
     except:
         print '[%s] Loading mod: Not found "victory_chances" module, loading stoped!' % __author__
     else:
-        g_StatisticEvents.OnBattleLoaded += onBattleLoaded
+        g_StatisticEvents.onBattleLoaded += onBattleLoaded
 
         # Hooks ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -354,11 +354,11 @@ else:
             if CONFIG_FILENAME is not None:
                 battle = g_appLoader.getDefBattleApp()
                 battle.VictoryChancesGUI.Visible(False)
-                battle.VictoryChancesGUI.__del__()
+                battle.VictoryChancesGUI.destroy()
                 del battle.VictoryChancesGUI
 
         @g_overrideLib.registerEvent(PlayerAvatar, 'onBecomeNonPlayer', True, True)
         def new_onBecomeNonPlayer(self):
-            g_StatisticEvents.OnVehiclesChanged -= onVehiclesChanged
+            g_StatisticEvents.onVehiclesChanged -= onVehiclesChanged
 
         print '[%s] Loading mod: "victory_chances_gui" %s (http://www.koreanrandom.com)' % (__author__, __version__)

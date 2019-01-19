@@ -1,10 +1,20 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V2.2 P2.7 W1.3.0 26.12.2018'
+__version__ = 'V2.3 P2.7 W1.3.0 17.01.2019'
+
+#+-------------------------------------------- ATTENTION --------------------------------------------+
+#| If you are a mods maker and want to using this module in your application, then you need to:      |
+#| 1. Register your application in the developer's website (https://developers.wargaming.net) and    |
+#|    get the code <application_id> (hereinafter the appToken)                                       |
+#| 2. Use your appToken as the first argument when calling functions and registering event handlers: |
+#|    g_XVMConsole.getStatsByID(appToken, 2365719)                                                   |
+#|    g_XVMStatisticsEvents.addStatsAccountBecomePlayer(appToken, MyStats)                           |
+#| 3. Inform users of your application that for obtaining statistics, it's necessary for the player  |
+#|    to activate his access to the XVM server on the website (https://modxvm.com/).                 |
+#+---------------------------------------------------------------------------------------------------+
 
 import BigWorld
-from Event import Event
 import BattleReplay
 from Avatar import PlayerAvatar
 from PlayerEvents import g_playerEvents
@@ -15,8 +25,12 @@ from constants import CURRENT_REALM, DEFAULT_LANGUAGE
 from os import path, makedirs
 import cPickle, threading
 from copy import deepcopy
-from http_methods import loadJsonUrl
-from time import sleep
+from time import time, sleep
+
+from methods.http import loadJsonUrl
+from methods.console import _StatisticsConsole
+from methods.events import _StatisticsEvents
+from methods.hook import g_overrideLib
 
 # Consts .....................................................................
 
@@ -110,6 +124,25 @@ def _userRegion(accountDBID):
 
 # Classes ====================================================================
 
+#Determines the home region of the game client or authorized player
+class _HomeRegion(object):
+    homeRegion  = property(lambda self: self.__homeRegion)
+    accountDBID = property(lambda self: self.__accountDBID)
+
+    def __init__(self):
+        self.__accountDBID = 0
+        self.__homeRegion = REGION_RU if CURRENT_REALM == 'RU' else REGION_EU if CURRENT_REALM == 'EU' else \
+                            REGION_NA if CURRENT_REALM == 'NA' else REGION_AS if CURRENT_REALM in ('ASIA', 'CN', 'KR') else \
+                            REGION_RU if DEFAULT_LANGUAGE == 'ru' else REGION_NA
+
+    def setAccountDBID(self, accountDBID):
+        if accountDBID:
+            self.__accountDBID = accountDBID
+            self.__homeRegion = _userRegion(self.__accountDBID)
+            return True
+        self.__accountDBID = 0
+        return False
+
 class TOKEN_ERRORS:
     OK              = 0
     NEED_LOGIN      = 1
@@ -155,7 +188,7 @@ class _UserToken(object):
                         self.__userToken = ''
                         self.__error = TOKEN_ERRORS.NOT_CONNECTION
                         return
-                    elif not stats or stats.get('status', None) in (None, 'inactive'):
+                    elif not stats or stats.get('status', None) in (None, 'inactive', 'expired') or stats.get('expires_at', 0) / 1000.0 < time():
                         if self.__accountDBID in self.__tokensBase:
                             self.__tokensBase.pop(self.__accountDBID)
                         self.__userToken = ''
@@ -168,7 +201,7 @@ class _UserToken(object):
                         self.__userToken = ''
                         self.__error = TOKEN_ERRORS.NOT_CONNECTION
                         return
-                    elif not stats or stats.get('status', None) in (None, 'inactive'):
+                    elif not stats or stats.get('status', None) in (None, 'inactive', 'expired') or stats.get('expires_at', 0) / 1000.0 < time():
                         self.__tokensBase.pop(self.__accountDBID)
                         self.__userToken = ''
                         self.__error = TOKEN_ERRORS.NEED_ACTIVATION
@@ -274,73 +307,32 @@ class _UserToken(object):
         if self.__error == TOKEN_ERRORS.NEED_LOGIN:
             return 'You need to be logged in once for authorization!'
         elif self.__error == TOKEN_ERRORS.NEED_ACTIVATION:
-            return 'Requires activation on the XVM-site (https://modxvm.com/) and restart the game client!'
+            return 'Requires activation on the XVM-website (https://modxvm.com/) and restart the game client!'
         elif self.__error == TOKEN_ERRORS.NOT_CONNECTION:
             return 'No connection to the XVM-server!'        
         return ''
 
-#Determines the home region of the game client or authorized player
-class _HomeRegion(object):
-    homeRegion  = property(lambda self: self.__homeRegion)
-    accountDBID = property(lambda self: self.__accountDBID)
-
-    def __init__(self):
-        self.__accountDBID = 0
-        self.__homeRegion = REGION_RU if CURRENT_REALM == 'RU' else REGION_EU if CURRENT_REALM == 'EU' else \
-                            REGION_NA if CURRENT_REALM == 'NA' else REGION_AS if CURRENT_REALM in ('ASIA', 'CN', 'KR') else \
-                            REGION_RU if DEFAULT_LANGUAGE == 'ru' else REGION_NA
-
-    def setAccountDBID(self, accountDBID):
-        if accountDBID:
-            self.__accountDBID = accountDBID
-            self.__homeRegion = _userRegion(self.__accountDBID)
-            return True
-        self.__accountDBID = 0
-        return False
-
 #Sending typical requests to the XVM-server
-class _XVMConsole(object):
+class _XVMConsole(_StatisticsConsole):
     def __init__(self):
-        self.OnAsyncReports = Event()
+        _StatisticsConsole.__init__(self)
         self.__timeDelay = 0.5
 
-    def __prepareRequest(self, async, url, onAsyncReport=None):
+    def getVersion(self, appToken):
+        if appToken and g_UserToken.accountDBID and g_UserToken.userToken:
+            return self._StatisticsConsole__prepareRequest(appToken, False, XVM_GETVERSION.format(TOKEN=g_UserToken.userToken, ID=g_UserToken.accountDBID))
+
+    def getOnlineUsersCount(self, appToken):
+        if appToken and g_UserToken.userToken:
+            return self._StatisticsConsole__prepareRequest(appToken, False, XVM_ONLINE.format(TOKEN=g_UserToken.userToken))
+
+    def __prepareStatsByParamsRequest(self, appToken, async, params, onAsyncReports, timeout):
         if async:
-            thread = threading.Thread(target=self.__sendRequest, args=[async, url, onAsyncReport])
+            thread = threading.Thread(target=self.__sendStatsByParamsRequest, args=[appToken, async, params, onAsyncReports, timeout])
             thread.setDaemon(True)
             thread.start()
         else:
-            return self.__sendRequest(async, url, None)
-
-    def __sendRequest(self, async, url, onAsyncReport):
-        answer = loadJsonUrl(url)
-        if async:
-            if onAsyncReport:
-                onAsyncReport(answer)
-            else:
-                if len(self.OnAsyncReports._delegates) > 1:
-                    for delegate in self.OnAsyncReports._delegates[0:-1]:
-                        delegate(deepcopy(answer))
-                    self.OnAsyncReports._delegates[-1](answer)
-                else:
-                    self.OnAsyncReports(answer)
-        return answer
-
-    def getVersion(self):
-        if g_UserToken.accountDBID and g_UserToken.userToken:
-            return self.__prepareRequest(False, XVM_GETVERSION.format(TOKEN=g_UserToken.userToken, ID=g_UserToken.accountDBID))
-
-    def getOnlineUsersCount(self):
-        if g_UserToken.userToken:
-            return self.__prepareRequest(False, XVM_ONLINE.format(TOKEN=g_UserToken.userToken))
-
-    def __prepareStatsByParamsRequest(self, async, params, onAsyncReport, timeout):
-        if async:
-            thread = threading.Thread(target=self.__sendStatsByParamsRequest, args=[async, params, onAsyncReport, timeout])
-            thread.setDaemon(True)
-            thread.start()
-        else:
-            return self.__sendStatsByParamsRequest(async, params, None, timeout)
+            return self.__sendStatsByParamsRequest(appToken, async, params, None, timeout)
 
     def __sendQuery(self, query, players, timeout):
         answer = None
@@ -356,7 +348,7 @@ class _XVMConsole(object):
                     vehicle[id]['id'] = id
             players['players'].append(answer)
 
-    def __sendStatsByParamsRequest(self, async, params, onAsyncReport, timeout):
+    def __sendStatsByParamsRequest(self, appToken, async, params, onAsyncReports, timeout):
         players = {'players': []}
         if len(params) == 3:
             XVM_QUERY, tags, region = params
@@ -372,58 +364,82 @@ class _XVMConsole(object):
         for thread in threads:
             thread.join()
         if async:
-            if onAsyncReport:
-                onAsyncReport(players)
-            else:
-                if len(self.OnAsyncReports._delegates) > 1:
-                    for delegate in self.OnAsyncReports._delegates[0:-1]:
+            if onAsyncReports:
+                if isinstance(onAsyncReports, list):
+                    for delegate in onAsyncReports[0:-1]:
                         delegate(deepcopy(players))
-                    self.OnAsyncReports._delegates[-1](players)
+                    onAsyncReports[-1](players)
                 else:
-                    self.OnAsyncReports(players)
+                    onAsyncReports(players)
+            else:
+                if appToken in self._StatisticsConsole__onAsyncReports:
+                    for delegate in self._StatisticsConsole__onAsyncReports[appToken][0:-1]:
+                        delegate(deepcopy(players))
+                    self._StatisticsConsole__onAsyncReports[appToken][-1](players)
         return players
 
-    #IDs=[2365719, 34483, accountDBID, ...] or 2365719 only
-    def getStatsByID(self, IDs, timeout=5.0):
-        if g_UserToken.userToken and IDs:
+    #appToken=<application_id>; IDs=[2365719, 34483, accountDBID, ...] or 2365719 only
+    def getStatsByID(self, appToken, IDs, timeout=5.0):
+        if appToken and g_UserToken.userToken and IDs:
             if isinstance(IDs, int):
                 IDs = [IDs]
-            return self.__prepareStatsByParamsRequest(False, [XVM_STATSBYID, IDs], None, timeout)
+            return self.__prepareStatsByParamsRequest(appToken, False, [XVM_STATSBYID, IDs], None, timeout)
 
-    def getStatsByID_Async(self, IDs, onAsyncReport=None, timeout=5):
-        if g_UserToken.userToken and IDs:
+    def getStatsByID_Async(self, appToken, IDs, onAsyncReports=None, timeout=5.0):
+        if appToken and g_UserToken.userToken and IDs:
             if isinstance(IDs, int):
                 IDs = [IDs]
-            self.__prepareStatsByParamsRequest(True, [XVM_STATSBYID, IDs], onAsyncReport, timeout)
-        elif onAsyncReport:
-            onAsyncReport(None)
-        else:
-            self.OnAsyncReports(None)
+            self.__prepareStatsByParamsRequest(appToken, True, [XVM_STATSBYID, IDs], onAsyncReports, timeout)
+        elif onAsyncReports:
+            if isinstance(onAsyncReports, list):
+                for delegate in onAsyncReports:
+                    delegate(None)
+            else:
+                onAsyncReports(None)
+        elif appToken in self._StatisticsConsole__onAsyncReports:
+            for delegate in self._StatisticsConsole__onAsyncReports[appToken]:
+                delegate(None)
 
-    #nicknames = ['Straik','MeeGo'] or 'Straik' only; region='RU' 
-    def getStatsByNick(self, nicknames, region='', timeout=5.0):
-        if g_UserToken.userToken and nicknames:
+    #appToken=<application_id>; nicknames = ['Straik','MeeGo'] or 'Straik' only; region='RU' 
+    def getStatsByNick(self, appToken, nicknames, region='', timeout=5.0):
+        if appToken and g_UserToken.userToken and nicknames:
             if isinstance(nicknames, str):
                 nicknames = [nicknames]
             if not region:
                 region = g_HomeRegion.homeRegion
-            return self.__prepareStatsByParamsRequest(False, [XVM_STATSBYNICK, nicknames, region], None, timeout)
+            return self.__prepareStatsByParamsRequest(appToken, False, [XVM_STATSBYNICK, nicknames, region], None, timeout)
 
-    def getStatsByNick_Async(self, nicknames, region='', onAsyncReport=None, timeout=5):
-        if g_UserToken.userToken and nicknames:
+    def getStatsByNick_Async(self, appToken, nicknames, region='', onAsyncReports=None, timeout=5.0):
+        if appToken and g_UserToken.userToken and nicknames:
             if isinstance(nicknames, str):
                 nicknames = [nicknames]
             if not region:
                 region = g_HomeRegion.homeRegion
-            self.__prepareStatsByParamsRequest(True, [XVM_STATSBYNICK, nicknames, region], onAsyncReport, timeout)
-        elif onAsyncReport:
-            onAsyncReport(None)
-        else:
-            self.OnAsyncReports(None)
+            self.__prepareStatsByParamsRequest(appToken, True, [XVM_STATSBYNICK, nicknames, region], onAsyncReports, timeout)
+        elif onAsyncReports:
+            if isinstance(onAsyncReports, list):
+                for delegate in onAsyncReports:
+                    delegate(None)
+            else:
+                onAsyncReports(None)
+        elif appToken in self._StatisticsConsole__onAsyncReports:
+            for delegate in self._StatisticsConsole__onAsyncReports[appToken]:
+                delegate(None)
 
     #See "_load_stat" in xvm_main\python\stats.py
-    #ids={2365719:54529, 4100782:51841, accountDBID:compactDescr, ...}
-    def getStats(self, ids):
+    #appToken=<application_id>; ids={2365719:54529, 4100782:51841, accountDBID:compactDescr, ...}
+    def getStats(self, appToken, ids):
+        if appToken and g_UserToken.userToken and ids:
+            requestList = []
+            replay = BattleReplay.isPlaying()
+            for accountDBID, vehCD in ids.items():
+                if vehCD != 65281:
+                    requestList.append('%d=%d%s' % (accountDBID, vehCD, '=1' if not replay and accountDBID == g_UserToken.accountDBID else ''))
+            ids = ','.join(requestList) 
+            return self._StatisticsConsole__prepareRequest(appToken, False, XVM_STATSREPLAY.format(TOKEN=g_UserToken.userToken, DICT=ids) if replay else \
+                                                                            XVM_STATS.format(TOKEN=g_UserToken.userToken, DICT=ids))
+
+    def getStats_Async(self, appToken, ids, onAsyncReports=None):
         if g_UserToken.userToken and ids:
             requestList = []
             replay = BattleReplay.isPlaying()
@@ -431,29 +447,17 @@ class _XVMConsole(object):
                 if vehCD != 65281:
                     requestList.append('%d=%d%s' % (accountDBID, vehCD, '=1' if not replay and accountDBID == g_UserToken.accountDBID else ''))
             ids = ','.join(requestList) 
-            return self.__prepareRequest(False, XVM_STATSREPLAY.format(TOKEN=g_UserToken.userToken, DICT=ids) if replay else \
-                                                XVM_STATS.format(TOKEN=g_UserToken.userToken, DICT=ids))
-
-    def getStats_Async(self, ids, onAsyncReport=None):
-        if g_UserToken.userToken and ids:
-            requestList = []
-            replay = BattleReplay.isPlaying()
-            for accountDBID, vehCD in ids.items():
-                if vehCD != 65281:
-                    requestList.append('%d=%d%s' % (accountDBID, vehCD, '=1' if not replay and accountDBID == g_UserToken.accountDBID else ''))
-            ids = ','.join(requestList) 
-            self.__prepareRequest(True, XVM_STATSREPLAY.format(TOKEN=g_UserToken.userToken, DICT=ids) if replay else \
-                                        XVM_STATS.format(TOKEN=g_UserToken.userToken, DICT=ids), onAsyncReport)
-        elif onAsyncReport:
-            onAsyncReport(None)
-        else:
-            self.OnAsyncReports(None)
-
-class _XVMStatisticsEvents(object):
-    def __init__(self):
-        self.OnStatsAccountBecomePlayer = Event()
-        self.OnStatsBattleLoaded        = Event()
-        self.OnStatsFullBattleLoaded    = Event()
+            self._StatisticsConsole__prepareRequest(appToken, True, XVM_STATSREPLAY.format(TOKEN=g_UserToken.userToken, DICT=ids) if replay else \
+                                                                    XVM_STATS.format(TOKEN=g_UserToken.userToken, DICT=ids), onAsyncReports)
+        elif onAsyncReports:
+            if isinstance(onAsyncReports, list):
+                for delegate in onAsyncReports:
+                    delegate(None)
+            else:
+                onAsyncReports(None)
+        elif appToken in self._StatisticsConsole__onAsyncReports:
+            for delegate in self._StatisticsConsole__onAsyncReports[appToken]:
+                delegate(None)
 
 # Vars .......................................................................
 
@@ -464,11 +468,9 @@ g_HomeRegion          = _HomeRegion()
 #'token' in "<token>.dat"-file from the cache-folder
 g_UserToken           = _UserToken()
 g_XVMConsole          = _XVMConsole()
-g_XVMStatisticsEvents = _XVMStatisticsEvents()
+g_XVMStatisticsEvents = _StatisticsEvents()
 
 # Hooks ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-from hook_methods import g_overrideLib
 
 @g_overrideLib.registerEvent(PlayerAvatar, '_PlayerAvatar__startGUI')
 def new__startGUI(self):
@@ -485,11 +487,14 @@ def new__startGUI(self):
         if vehCD is None:
             vehCD = 0
         IDs[vData['accountDBID']] = vehCD
-    if g_XVMStatisticsEvents.OnStatsFullBattleLoaded._delegates:
+    onStats = g_XVMStatisticsEvents._onStats_BattleLoaded
+    onStatsFull = g_XVMStatisticsEvents._onStats_FullBattleLoaded
+    if onStatsFull:
         if IDs:
-            if g_XVMStatisticsEvents.OnStatsBattleLoaded._delegates:
-
-                def OnStats(statistic):
+            appTokens = g_XVMStatisticsEvents._appTokens_FullBattleLoaded
+            if onStats:
+                #Make a request only once
+                def onStatsExt(statistic):
                     stats = deepcopy(statistic) if statistic else None
                     player = BigWorld.player()
                     if stats and 'players' in stats:
@@ -497,31 +502,30 @@ def new__startGUI(self):
                             ID = user.get('_id', 0)
                             if ID in IDs and 'v' in user:
                                 user['v'] = user['v'].get(str(IDs[ID]), {})
-                    if len(g_XVMStatisticsEvents.OnStatsBattleLoaded._delegates) > 1:
-                        for delegate in g_XVMStatisticsEvents.OnStatsBattleLoaded._delegates[0:-1]:
+                    if onStats:
+                        for delegate in onStats[0:-1]:
                             delegate(deepcopy(stats))
-                        g_XVMStatisticsEvents.OnStatsBattleLoaded._delegates[-1](stats)
-                    else:
-                        g_XVMStatisticsEvents.OnStatsBattleLoaded(stats)
-                    if len(g_XVMStatisticsEvents.OnStatsFullBattleLoaded._delegates) > 1:
-                        for delegate in g_XVMStatisticsEvents.OnStatsFullBattleLoaded._delegates[0:-1]:
+                        onStats[-1](stats)
+                    if onStatsFull:
+                        for delegate in onStatsFull[0:-1]:
                             delegate(deepcopy(statistic))
-                        g_XVMStatisticsEvents.OnStatsFullBattleLoaded._delegates[-1](statistic)
-                    else:
-                        g_XVMStatisticsEvents.OnStatsFullBattleLoaded(statistic)
+                        onStatsFull[-1](statistic)
 
-                g_XVMConsole.getStatsByID_Async(IDs.keys(), OnStats)
+                g_XVMConsole.getStatsByID_Async(appTokens.appToken, IDs.keys(), onStatsExt)
             else:
-                g_XVMConsole.getStatsByID_Async(IDs.keys(), g_XVMStatisticsEvents.OnStatsFullBattleLoaded)
+                g_XVMConsole.getStatsByID_Async(appTokens.appToken, IDs.keys(), onStatsFull)
         else:
-            if g_XVMStatisticsEvents.OnStatsBattleLoaded._delegates:
-                g_XVMStatisticsEvents.OnStatsBattleLoaded(None)
-            g_XVMStatisticsEvents.OnStatsFullBattleLoaded(None)
-    elif g_XVMStatisticsEvents.OnStatsBattleLoaded._delegates:
+            for delegate in onStats:
+                delegate(None)
+            for delegate in onStatsFull:
+                delegate(None)
+    elif onStats:
         if IDs:
-            g_XVMConsole.getStats_Async(IDs, g_XVMStatisticsEvents.OnStatsBattleLoaded)
+            appTokens = g_XVMStatisticsEvents._appTokens_BattleLoaded
+            g_XVMConsole.getStats_Async(appTokens.appToken, IDs, onStats)
         else:
-            g_XVMStatisticsEvents.OnStatsBattleLoaded(None)
+            for delegate in onStats:
+                delegate(None)
 
 def addStatsAccountBecomePlayer():
     if isPlayerAccount():
@@ -532,8 +536,11 @@ def addStatsAccountBecomePlayer():
             g_HomeRegion.setAccountDBID(BigWorld.player().databaseID)
             if g_UserToken.errorStatus:
                 print '[%s] "xvm_statistics": %s' % (__author__, g_UserToken.errorStatus)
-            elif g_XVMStatisticsEvents.OnStatsAccountBecomePlayer._delegates:
-                g_XVMConsole.getStatsByID_Async(g_UserToken.accountDBID, g_XVMStatisticsEvents.OnStatsAccountBecomePlayer)
+            else:
+                onStats = g_XVMStatisticsEvents._onStats_AccountBecomePlayer
+                if onStats:
+                    appTokens = g_XVMStatisticsEvents._appTokens_AccountBecomePlayer
+                    g_XVMConsole.getStatsByID_Async(appTokens.appToken, g_UserToken.accountDBID, onStats)
 
 g_playerEvents.onAccountBecomePlayer += addStatsAccountBecomePlayer
 
