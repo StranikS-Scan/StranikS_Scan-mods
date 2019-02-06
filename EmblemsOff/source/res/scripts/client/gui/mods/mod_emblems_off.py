@@ -1,6 +1,6 @@
 ﻿# -*- coding: utf-8 -*-
 
-__version__ = 'V1.8.0 P2.7 W1.3.0 19.12.2018'
+__version__ = 'V1.9.0 P2.7 W1.4.0 06.02.2019'
 __author__  = 'StranikS_Scan'
 
 import BigWorld
@@ -12,9 +12,11 @@ from os import path, walk, remove
 
 def new_attachStickers(self, model, parentNode, isDamaged, toPartRootMatrix=None):
     old_attachStickers(self, model, parentNode, isDamaged, toPartRootMatrix)
-    for slotType, stickerPack in self._ModelStickers__stickerPacks.iteritems():
-        if slotType == SlotTypes.CLAN:
-            stickerPack.detach(self._ModelStickers__componentIdx, self._ModelStickers__stickerModel)
+    if self._ModelStickers__stickerModel.attached:
+        self._ModelStickers__parentNode.detach(self._ModelStickers__stickerModel)
+    for stickerPackTuple in self._ModelStickers__stickerPacks.itervalues():
+        for stickerPack in stickerPackTuple:
+            stickerPack.detach(self._ModelStickers__componentIdx, self.___ModelStickersstickerModel)
 
 old_attachStickers = ModelStickers.attachStickers
 ModelStickers.attachStickers = new_attachStickers
