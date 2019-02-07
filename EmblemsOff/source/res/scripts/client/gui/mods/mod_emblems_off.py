@@ -1,6 +1,6 @@
 ﻿# -*- coding: utf-8 -*-
 
-__version__ = 'V1.9.0 P2.7 W1.4.0 06.02.2019'
+__version__ = 'V1.9.1 P2.7 W1.4.0 07.02.2019'
 __author__  = 'StranikS_Scan'
 
 import BigWorld
@@ -16,7 +16,7 @@ def new_attachStickers(self, model, parentNode, isDamaged, toPartRootMatrix=None
         self._ModelStickers__parentNode.detach(self._ModelStickers__stickerModel)
     for stickerPackTuple in self._ModelStickers__stickerPacks.itervalues():
         for stickerPack in stickerPackTuple:
-            stickerPack.detach(self._ModelStickers__componentIdx, self.___ModelStickersstickerModel)
+            stickerPack.detach(self._ModelStickers__componentIdx, self._ModelStickers__stickerModel)
 
 old_attachStickers = ModelStickers.attachStickers
 ModelStickers.attachStickers = new_attachStickers
