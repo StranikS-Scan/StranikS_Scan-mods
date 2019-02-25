@@ -1,6 +1,6 @@
 ﻿# -*- coding: utf-8 -*-
 
-__version__ = 'V1.9.1 P2.7 W1.4.0 07.02.2019'
+__version__ = 'V2.0 P2.7 W1.4.0 25.02.2019'
 __author__  = 'StranikS_Scan'
 
 import BigWorld
@@ -10,32 +10,27 @@ from os import path, walk, remove
 
 # Хук на аттач эмблем --------------------------------------------------------------
 
-def new_attachStickers(self, model, parentNode, isDamaged, toPartRootMatrix=None):
-    old_attachStickers(self, model, parentNode, isDamaged, toPartRootMatrix)
-    if self._ModelStickers__stickerModel.attached:
-        self._ModelStickers__parentNode.detach(self._ModelStickers__stickerModel)
-    for stickerPackTuple in self._ModelStickers__stickerPacks.itervalues():
-        for stickerPack in stickerPackTuple:
-            stickerPack.detach(self._ModelStickers__componentIdx, self._ModelStickers__stickerModel)
+def new_ModelStickers__init__(self, componentIdx, stickerPacks, *a, **k):
+    stickerPacks[SlotTypes.CLAN] = ()
+    old_ModelStickers__init__(self, componentIdx, stickerPacks, *a, **k)
 
-old_attachStickers = ModelStickers.attachStickers
-ModelStickers.attachStickers = new_attachStickers
+old_ModelStickers__init__ = ModelStickers.__init__
+ModelStickers.__init__ = new_ModelStickers__init__
 
 # Хук на скачивание эмблем кланов --------------------------------------------------
 
-old__readRemoteFile = CustomFilesCache._CustomFilesCache__readRemoteFile
-
-def new__readRemoteFile(self, url, modified_time, showImmediately, headers):
+def new_CustomFilesCache__readRemoteFile(self, url, *a, **k):
     if str(url).find('emblem_64x64_tank.png') == -1:
-        old__readRemoteFile(self, url, modified_time, showImmediately, headers)
+        old_CustomFilesCache__readRemoteFile(self, url, *a, **k)
 
-CustomFilesCache._CustomFilesCache__readRemoteFile = new__readRemoteFile
+old_CustomFilesCache__readRemoteFile = CustomFilesCache._CustomFilesCache__readRemoteFile
+CustomFilesCache._CustomFilesCache__readRemoteFile = new_CustomFilesCache__readRemoteFile
 
 # Очистка кэша иконок в AppData\Roaming\ -------------------------------------------
 
 ICONS_FILES = ('icons.bak', 'icons.dir', 'icons.dat')
 
-def new__init__(self, cacheFolder):
+def new_CustomFilesCache__init__(self, *a, **k):
     try:
         Preferences = BigWorld.wg_getPreferencesFilePath()
         if path.isfile(Preferences):
@@ -53,9 +48,9 @@ def new__init__(self, cacheFolder):
                                 else:
                                     print '[%s] "emblems_off": %s was deleted successfully!' % (__author__, icons_file)
     finally:
-        old__init__(self, cacheFolder)
+        old_CustomFilesCache__init__(self, *a, **k)
 
-old__init__ = CustomFilesCache.__init__ 
-CustomFilesCache.__init__ = new__init__
+old_CustomFilesCache__init__ = CustomFilesCache.__init__ 
+CustomFilesCache.__init__ = new_CustomFilesCache__init__
 
 print '[%s] Loading mod: "emblems_off" %s (http://www.koreanrandom.com/forum/topic/21432-)' % (__author__, __version__)
