@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V2.0 P2.7 W1.3.0 17.01.2019'
+__version__ = 'V2.1 P2.7 W1.4.0 06.03.2019'
 
 #+-------------------------------------------- ATTENTION --------------------------------------------+
 #| If you are a mods maker and want to using this module in your application, then you need to:      |
@@ -117,6 +117,7 @@ class _WGConsole(_StatisticsConsole):
     def __init__(self):
         _StatisticsConsole.__init__(self)
         self.__timeDelay = 0.5
+        self.__thread_max = 8
 
     def _StatisticsConsole__sendRequest(self, appToken, async, url, onAsyncReports):
         answer = loadJsonUrl(url)
@@ -294,6 +295,9 @@ class _WGConsole(_StatisticsConsole):
             fields = API_TANKS_FIELDS.format(FIELDS='all,tank_id,mark_of_mastery,in_garage')
             threads = []
             for accountDBID in stats.keys():
+                if len(threads) >= self.__thread_max:
+                    threads[0].join()
+                    threads.pop(0)
                 player = stats[accountDBID]
                 if player:
                     statistics = player.pop('statistics', None)
@@ -380,7 +384,10 @@ class _WGConsole(_StatisticsConsole):
             stats = answer['data'] if meta and meta['count'] > 0 else {}
             fields = API_TANKS_FIELDS.format(FIELDS='all,tank_id,mark_of_mastery,in_garage')
             threads = []
-            for accountDBID in stats.keys():
+            for accountDBID in stats.keys(): 
+                if len(threads) >= self.__thread_max:
+                    threads[0].join()
+                    threads.pop(0)
                 player = stats[accountDBID]
                 if player:
                     statistics = player.pop('statistics', None)
