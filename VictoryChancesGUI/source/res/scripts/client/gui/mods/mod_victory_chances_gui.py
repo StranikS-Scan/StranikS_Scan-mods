@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V2.4 P2.7 W1.2.0 18.01.2019'
+__version__ = 'V2.5 P2.7 W1.5.0 03.05.2019'
 
 import BigWorld, Event, BattleReplay, Keys
 from gui.Scaleform.framework.entities.BaseDAAPIComponent import BaseDAAPIComponent
@@ -10,7 +10,7 @@ from gui.Scaleform.framework.managers.loaders import ViewLoadParams
 from gui.Scaleform.framework import g_entitiesFactories, ViewSettings, ViewTypes, ScopeTemplates
 from gui.shared import g_eventBus, events, EVENT_BUS_SCOPE
 from gui.Scaleform.genConsts.BATTLE_VIEW_ALIASES import BATTLE_VIEW_ALIASES
-from gui.app_loader import g_appLoader
+from gui.shared.personality import ServicesLocator
 from gui import g_guiResetters
 from gui import InputHandler
 
@@ -209,7 +209,7 @@ def printStat(stat, full=False, changeID=None):
 getShowOneStat = lambda stat: '%s  %4d HP %6.2f %s  %s\n' % ('E' if stat['isEnemy'] else 'A', stat['hp'], stat['contribution'], '%', removeAccents(stat['name']))
 
 def showStat(stat, changeID=None):
-    battle = g_appLoader.getDefBattleApp()
+    battle = ServicesLocator.appLoader.getDefBattleApp()
     if SHOW_INFO and hasattr(battle, 'VictoryChancesGUI'):
         label = battle.VictoryChancesGUI
         info  = ''
@@ -296,7 +296,7 @@ def onBattleLoaded(statistic):
         PRINT_ITEMS = TeamChances['LogFormat']['PrintItems']
         LOG_FILENAME = getLogFileName(TeamChances['LogFormat']['Dir'], TeamChances['LogFormat']['Prefix'])
         #Flash -------------------------------------------
-        g_appLoader.getDefBattleApp().VictoryChancesGUI = VictoryChancesGUI = FlashTextLabel(GUI_TEXT)
+        ServicesLocator.appLoader.getDefBattleApp().VictoryChancesGUI = VictoryChancesGUI = FlashTextLabel(GUI_TEXT)
         VictoryChancesGUI.Visible(KEYS_SHOWHIDEALL['ShowDefault'])
         #Keys --------------------------------------------
         if SHOW_INFO:
@@ -315,7 +315,7 @@ def onKeyDown(event):
     global KEYS_SHOWHIDEALL
     if event.isKeyDown() and BigWorld.isKeyDown(KEYS_SHOWHIDEALL['Key']):
         KEYS_SHOWHIDEALL['ShowDefault'] = not KEYS_SHOWHIDEALL['ShowDefault']
-    battle = g_appLoader.getDefBattleApp()
+    battle = ServicesLocator.appLoader.getDefBattleApp()
     if hasattr(battle, 'VictoryChancesGUI'):
         battle.VictoryChancesGUI.Visible(KEYS_SHOWHIDEALL['ShowDefault'])
     if CONFIG_FILENAME:
@@ -352,7 +352,7 @@ else:
             InputHandler.g_instance.onKeyDown -= onShowHideTanksList
             InputHandler.g_instance.onKeyUp   -= onShowHideTanksList
             if CONFIG_FILENAME is not None:
-                battle = g_appLoader.getDefBattleApp()
+                battle = ServicesLocator.appLoader.getDefBattleApp()
                 battle.VictoryChancesGUI.Visible(False)
                 battle.VictoryChancesGUI.destroy()
                 del battle.VictoryChancesGUI

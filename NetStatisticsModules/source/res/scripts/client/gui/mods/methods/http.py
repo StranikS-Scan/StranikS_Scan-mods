@@ -1,15 +1,17 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V1.1 P2.7 W1.2.0 25.11.2018'
+__version__ = 'V1.2 P2.7 W1.2.0 03.05.2019'
 
-import json, urllib2
+from urllib2 import urlopen
+from json import loads
 
+URL_TIMEOUT = 3
 STATUS_ERRORS = frozenset(['error', 'badRequest', 'badToken'])
 
 def loadUrl(request):
     try:
-        response = urllib2.urlopen(request)
+        response = urlopen(url=request, timeout=URL_TIMEOUT)
         if response.code == 200:
             return response.read()
     except:
@@ -19,7 +21,7 @@ def loadJsonUrl(request):
     stats = loadUrl(request)
     if stats:
         try:
-            stats = json.loads(stats)
+            stats = loads(stats)
         except:
             pass
         else:
