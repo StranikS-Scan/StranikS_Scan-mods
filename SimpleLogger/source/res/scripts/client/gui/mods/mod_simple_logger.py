@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V1.1.0 P2.7 W1.3.0 18.01.2019'
+__version__ = 'V1.1.1 P2.7 W1.3.0 08.05.2019'
 
 import BigWorld, Event
 from BattleReplay import g_replayCtrl
@@ -300,11 +300,13 @@ else:
                 firstHitDir.normalise()
                 firstHitPos = compMatrix.applyPoint(firstHitPoint.matrix.translation)
                 collisions = self.appearance.collisions.collideAllWorld(firstHitPos - firstHitDir.scale(1.0), firstHitPos + firstHitDir.scale(10.0)) 
+                position = player.arena.positions.get(attackerID)
+                way = firstHitPos.distTo(position) if position else 0
                 if collisions:
                     base_distance = collisions[0][0]
                     for collision in collisions:
                         material = self.getMatinfo(collision[3], collision[2])
-                        hitInfo.append({'distance':collision[0] - base_distance, 'angleCos':collision[1], 'tankPart':TankPartIndexes.getName(collision[3]), \
+                        hitInfo.append({'distanse':way + collision[0] - base_distance, 'angleCos':collision[1], 'tankPart':TankPartIndexes.getName(collision[3]), \
                                         'armor':material.armor if material else None})
                         if material and material.vehicleDamageFactor > 0 and collision[3] in (TankPartIndexes.HULL, TankPartIndexes.TURRET):
                             break
