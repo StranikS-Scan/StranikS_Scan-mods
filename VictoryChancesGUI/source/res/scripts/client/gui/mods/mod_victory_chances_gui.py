@@ -1,25 +1,16 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V2.5 P2.7 W1.5.0 03.05.2019'
+__version__ = 'V2.6 P2.7 W1.5.0 09.05.2019'
 
-import BigWorld, Event, BattleReplay, Keys
-from gui.Scaleform.framework.entities.BaseDAAPIComponent import BaseDAAPIComponent
-from gui.Scaleform.framework.entities.View import View
-from gui.Scaleform.framework.managers.loaders import ViewLoadParams
-from gui.Scaleform.framework import g_entitiesFactories, ViewSettings, ViewTypes, ScopeTemplates
-from gui.shared import g_eventBus, events, EVENT_BUS_SCOPE
-from gui.Scaleform.genConsts.BATTLE_VIEW_ALIASES import BATTLE_VIEW_ALIASES
+import BigWorld, Keys
+from Avatar import PlayerAvatar
 from gui.shared.personality import ServicesLocator
-from gui import g_guiResetters
 from gui import InputHandler
 
-from Avatar import PlayerAvatar
-
-import re
+import os, re, codecs, json
+from unicodedata import normalize, combining
 from datetime import datetime
-import os, codecs, json
-import unicodedata
 
 # Consts and Vars ..........................................................................
 
@@ -32,8 +23,6 @@ KEYS_SHOWHIDEALL = {}
 KEYS_TANKSLIST = {}
 PRINT_LOG  = True
 PRINT_ITEMS = {}
-
-NEW_BATTLE = False
 
 GUI_TEXT  = {'Name': 'VictoryChancesGUI',
              'Font': 'Lucida Console',
@@ -69,7 +58,7 @@ class FlashTextLabel(object):
         self.text = ''
         self.visible = True
         self.name = params['Name']
-        options = {'visible': self.visible, 'index': 2, 'drag': True, 'multiline': True, 'border': True, 'text': self.text, \
+        options = {'visible': self.visible, 'index': 8, 'drag': True, 'multiline': True, 'border': True, 'text': self.text, \
                    'shadow': {'distance': 0, 'angle': 0, 'color': 0x000000, 'alpha': 0, 'blurX': 0, 'blurY': 0, 'strength': 0, 'quality': 0}}
         self.x, self.y = params['Pos'] if 'Pos' in params else (0,0)
         self.align = params['Align'] if 'Align' in params else ('center','center')
@@ -158,7 +147,7 @@ def getConfigFileName():
     return filename if os.path.exists(filename) else None
 
 def removeAccents(value): 
-    return u"".join([c for c in unicodedata.normalize('NFKD', unicode(value)) if not unicodedata.combining(c)])
+    return u"".join([c for c in normalize('NFKD', unicode(value)) if not combining(c)])
 
 def tankTypeAbb(tag):
     return 'MT' if 'mediumTank' == tag else 'HT' if 'heavyTank'== tag else 'AT' if 'AT-SPG' == tag else 'SPG' if 'SPG' == tag else 'LT'
@@ -171,13 +160,13 @@ def printStrings(value):
             else:
                 file.write(value)
 
-getPrintOneStat = lambda stat, full: '%s %s\t%4d HP\t%5.1f mm\t%5.2f sec\t%s\t%s dmg\t%s dpm\t%6.2f %s %s' % ('E' if stat['isEnemy'] else 'A', \
-                                     tankTypeAbb(stat['type']['tag']), stat['hp'], stat['gun']['caliber'], stat['gun']['reload'], stat['gun']['currentShell'], \
-                                     ('|'.join([' %s %6.1f ' % (sID, stat['gun']['shell'][sID]['damage']) for sID in stat['gun']['shell']])).ljust(20), \
-                                     ('|'.join([' %s %6.1f ' % (sID, stat['gun']['shell'][sID]['dpm']) for sID in stat['gun']['shell']])).ljust(20), \
-                                     stat['contribution'], '%', stat['name']) \
+getPrintOneStat = lambda tank, full: '%s %s\t%4d HP\t%5.1f mm\t%5.2f sec\t%s\t%s dmg\t%s dpm\t%6.2f %s %s' % ('E' if tank['isEnemy'] else 'A', \
+                                     tankTypeAbb(tank['type']['tag']), tank['hp'], tank['gun']['caliber'], tank['gun']['reload'], tank['gun']['currentShell'], \
+                                     ('|'.join([' %s %6.1f ' % (sID, tank['gun']['shell'][sID]['damage']) for sID in tank['gun']['shell']])).ljust(20), \
+                                     ('|'.join([' %s %6.1f ' % (sID, tank['gun']['shell'][sID]['dpm']) for sID in tank['gun']['shell']])).ljust(20), \
+                                     tank['contribution'], '%', tank['name']) \
                                      if full else \
-                                     '%s %s\t%4d HP\t%6.2f %s %s' % ('E' if stat['isEnemy'] else 'A', tankTypeAbb(stat['type']['tag']), stat['hp'], stat['contribution'], '%', stat['name'])
+                                     '%s %s\t%4d HP\t%6.2f %s %s' % ('E' if tank['isEnemy'] else 'A', tankTypeAbb(tank['type']['tag']), tank['hp'], tank['contribution'], '%', tank['name'])
 
 def printStat(stat, full=False, changeID=None):
     if LOG_FILENAME is not None and PRINT_LOG:
@@ -206,7 +195,7 @@ def printStat(stat, full=False, changeID=None):
                     file.write(getPrintOneStat(stat.base[vID], full) + ('\t*\n' if vID == changeID else '\n'))
                 file.write('\n')
 
-getShowOneStat = lambda stat: '%s  %4d HP %6.2f %s  %s\n' % ('E' if stat['isEnemy'] else 'A', stat['hp'], stat['contribution'], '%', removeAccents(stat['name']))
+getShowOneStat = lambda tank: '%s  %4d HP %6.2f %s  %s\n' % ('E' if tank['isEnemy'] else 'A', tank['hp'], tank['contribution'], '%', removeAccents(tank['name']))
 
 def showStat(stat, changeID=None):
     battle = ServicesLocator.appLoader.getDefBattleApp()
@@ -266,7 +255,7 @@ def onVehiclesChanged(statistic, reasone, vID):
 
 def onBattleLoaded(statistic):
     global CONFIG_FILENAME, LOG_FILENAME, SHOW_INFO, SHOW_ITEMS, KEYS_SHOWHIDEALL, KEYS_TANKSLIST, \
-           PRINT_LOG, PRINT_ITEMS, GUI_TEXT, NEW_BATTLE
+           PRINT_LOG, PRINT_ITEMS, GUI_TEXT
     CONFIG_FILENAME = getConfigFileName()
     if CONFIG_FILENAME is not None:
         #Config ------------------------------------------
@@ -315,13 +304,13 @@ def onKeyDown(event):
     global KEYS_SHOWHIDEALL
     if event.isKeyDown() and BigWorld.isKeyDown(KEYS_SHOWHIDEALL['Key']):
         KEYS_SHOWHIDEALL['ShowDefault'] = not KEYS_SHOWHIDEALL['ShowDefault']
-    battle = ServicesLocator.appLoader.getDefBattleApp()
-    if hasattr(battle, 'VictoryChancesGUI'):
-        battle.VictoryChancesGUI.Visible(KEYS_SHOWHIDEALL['ShowDefault'])
-    if CONFIG_FILENAME:
-        s = re.sub('"ShowDefault"\s*:\s*(true|false)', '"ShowDefault": ' + str(KEYS_SHOWHIDEALL['ShowDefault']).lower(), codecs.open(CONFIG_FILENAME, 'r', 'utf-8-sig').read())
-        with codecs.open(CONFIG_FILENAME, 'w', 'utf-8-sig') as f:
-            f.write(s)
+        battle = ServicesLocator.appLoader.getDefBattleApp()
+        if hasattr(battle, 'VictoryChancesGUI'):
+            battle.VictoryChancesGUI.Visible(KEYS_SHOWHIDEALL['ShowDefault'])
+            if CONFIG_FILENAME:
+                s = re.sub('"ShowDefault"\s*:\s*(true|false)', '"ShowDefault": ' + str(KEYS_SHOWHIDEALL['ShowDefault']).lower(), codecs.open(CONFIG_FILENAME, 'r', 'utf-8-sig').read())
+                with codecs.open(CONFIG_FILENAME, 'w', 'utf-8-sig') as f:
+                    f.write(s)
 
 def onShowHideTanksList(event):
     global SHOW_ITEMS
