@@ -195,7 +195,7 @@ def printStat(stat, full=False, changeID=None):
                     file.write(getPrintOneStat(stat.base[vID], full) + ('\t*\n' if vID == changeID else '\n'))
                 file.write('\n')
 
-getShowOneStat = lambda tank: '%s  %4d HP %6.2f %s  %s\n' % ('E' if tank['isEnemy'] else 'A', tank['hp'], tank['contribution'], '%', removeAccents(tank['name']))
+getShowOneStat = lambda tank: '%s  %4d/%s HP %6.2f %s  %s\n' % ('E' if tank['isEnemy'] else 'A', tank['hp'], ('%d' % tank['hpMax']).ljust(4), tank['contribution'], '%', removeAccents(tank['name']))
 
 def showStat(stat, changeID=None):
     battle = ServicesLocator.appLoader.getDefBattleApp()

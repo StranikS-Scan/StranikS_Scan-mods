@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V1.1.1 P2.7 W1.3.0 08.05.2019'
+__version__ = 'V1.1.2 P2.7 W1.3.0 11.05.2019'
 
 import BigWorld, Event
 from BattleReplay import g_replayCtrl
@@ -215,9 +215,9 @@ else:
         #Config ------------------------------------------
         config = json.loads(re.compile('(/\*(.|\n)*?\*/)|((#|//).*?$)', re.I | re.M).sub('', codecs.open(CONFIG_FILENAME, 'r', 'utf-8-sig').read()))
         logPath = getLogPath(config['System']['Dir'] + ('/log_' + datetime.now().strftime('%d%m%y_%H%M%S_%f')[:17] if config['System']['UniquePostfix'] else ''))
-        LOG_BATTLES_FILENAME = logPath + '/sl_battles_ver_%s.csv' % CSV_VERSION
-        LOG_PLAYERS_FILENAME = logPath + '/sl_players_ver_%s.csv' % CSV_VERSION
-        LOG_EVENTS_FILENAME = logPath + '/sl_events_ver_%s.csv' % CSV_VERSION
+        LOG_BATTLES_FILENAME = logPath + 'sl_battles_ver_%s.csv' % CSV_VERSION
+        LOG_PLAYERS_FILENAME = logPath + 'sl_players_ver_%s.csv' % CSV_VERSION
+        LOG_EVENTS_FILENAME = logPath + 'sl_events_ver_%s.csv' % CSV_VERSION
         LOG_BATTLES = config['System']['Log']['Battles']
         LOG_PLAYERS = config['System']['Log']['Players']
         LOG_EVENTS = config['System']['Log']['Events']
@@ -239,8 +239,8 @@ else:
                          '"PlayerAvatar.showTracer"',
                          '%s' % self.arena.vehicles[shooterID].get('accountDBID', '-'),
                          '',
-                         json.dumps({'shotID':shotID, 'isRicochet':isRicochet, 'effectsIndex':effectsIndex, 'refStartPoint':str(refStartPoint), 'velocity':str(velocity), \
-                                     'gravity':gravity, 'maxShotDist':maxShotDist})]
+                         json.dumps({'shotID':shotID, 'isRicochet':isRicochet, 'effectsIndex':effectsIndex, 'refStartPoint':str(refStartPoint), \
+                                     'velocity':velocity.length/0.8, 'gravity':gravity/0.64, 'maxShotDist':maxShotDist})]
             #Decode info
             shellInfo = {}
             for shot in self.arena.vehicles[shooterID]['vehicleType'].gun.shots:
@@ -250,8 +250,8 @@ else:
                     shellInfo['damage'] = str(shot.shell.damage)
                     shellInfo['caliber'] = shot.shell.caliber
                     shellInfo['piercingPower'] = str(shot.piercingPower)
-                    shellInfo['speed'] = shot.speed
-                    shellInfo['gravity'] = shot.gravity
+                    shellInfo['speed'] = shot.speed/0.8
+                    shellInfo['gravity'] = shot.gravity/0.64
                     shellInfo['maxDistance'] = shot.maxDistance
                     if shot.shell.kind == 'HIGH_EXPLOSIVE':
                         shellInfo['explosionRadius'] = shot.shell.type.explosionRadius
@@ -270,7 +270,7 @@ else:
                          '"Vehicle.showDamageFromShot"',
                          '%s' % player.arena.vehicles[self.id].get('accountDBID', '-'),
                          '%s' % player.arena.vehicles[attackerID].get('accountDBID', '-'),
-                         json.dumps({'effectsIndex':effectsIndex, 'damageFactor':damageFactor})]
+                         json.dumps({'points':len(points) if points else 0, 'effectsIndex':effectsIndex, 'damageFactor':damageFactor})]
             #Decode info
             shellInfo = {}
             for shot in player.arena.vehicles[attackerID]['vehicleType'].gun.shots:
@@ -280,8 +280,8 @@ else:
                     shellInfo['damage'] = str(shot.shell.damage)
                     shellInfo['caliber'] = shot.shell.caliber
                     shellInfo['piercingPower'] = str(shot.piercingPower)
-                    shellInfo['speed'] = shot.speed
-                    shellInfo['gravity'] = shot.gravity
+                    shellInfo['speed'] = shot.speed/0.8
+                    shellInfo['gravity'] = shot.gravity/0.64
                     shellInfo['maxDistance'] = shot.maxDistance
                     if shot.shell.kind == 'HIGH_EXPLOSIVE':
                         shellInfo['explosionRadius'] = shot.shell.type.explosionRadius
@@ -289,8 +289,11 @@ else:
             eventInfo.append(json.dumps(shellInfo) if shellInfo else '')
             maxHitEffectCode, decodedPoints, maxDamagedComponent = DamageFromShotDecoder.decodeHitPoints(points, self.appearance.collisions)
             hasPiercedHit = DamageFromShotDecoder.hasDamaged(maxHitEffectCode)
+            attacker = BigWorld.entities.get(attackerID, None)
+            attackerPos = attacker.position if isinstance(attacker, Vehicle) and attacker.inWorld and attacker.isStarted else player.arena.positions.get(attackerID)
             eventInfo.append(json.dumps({'maxHitEffectCode':VEHICLE_HIT_EFFECT_NAMES.get(maxHitEffectCode), 'maxDamagedComponent':maxDamagedComponent, \
-                                         'hasPiercedHit':hasPiercedHit}))
+                                         'hasPiercedHit':hasPiercedHit, 'distance':self.position.distTo(attackerPos) if attackerPos else None,
+                                         'hitPoints':[{'componentName':point.componentName, 'hitEffectGroup':point.hitEffectGroup} for point in decodedPoints] if decodedPoints else None}))
             hitInfo = []
             if decodedPoints:
                 firstHitPoint = decodedPoints[0]
@@ -299,18 +302,20 @@ else:
                 firstHitDir = compMatrix.applyVector(firstHitDirLocal)
                 firstHitDir.normalise()
                 firstHitPos = compMatrix.applyPoint(firstHitPoint.matrix.translation)
-                collisions = self.appearance.collisions.collideAllWorld(firstHitPos - firstHitDir.scale(1.0), firstHitPos + firstHitDir.scale(10.0)) 
-                position = player.arena.positions.get(attackerID)
-                way = firstHitPos.distTo(position) if position else 0
+                collisions = self.appearance.collisions.collideAllWorld(firstHitPos - firstHitDir.scale(0.1), firstHitPos + firstHitDir.scale(5.0))
                 if collisions:
                     base_distance = collisions[0][0]
                     for collision in collisions:
+                        if collision[3] < 0:
+                            continue
+                        if collision[3] not in TankPartIndexes.ALL:
+                            break
                         material = self.getMatinfo(collision[3], collision[2])
-                        hitInfo.append({'distanse':way + collision[0] - base_distance, 'angleCos':collision[1], 'tankPart':TankPartIndexes.getName(collision[3]), \
+                        hitInfo.append({'distanse':collision[0] - base_distance, 'angleCos':collision[1], 'tankPart':TankPartIndexes.getName(collision[3]), \
                                         'armor':material.armor if material else None})
                         if material and material.vehicleDamageFactor > 0 and collision[3] in (TankPartIndexes.HULL, TankPartIndexes.TURRET):
                             break
-            eventInfo.append(json.dumps(hitInfo) if hitInfo else '')
+            eventInfo.append(json.dumps('layers: %s' % hitInfo) if hitInfo else '')
             printStrings(LOG_EVENTS_FILENAME, eventInfo)
 
     @g_overrideLib.registerEvent(Vehicle, 'showDamageFromExplosion')
@@ -333,8 +338,8 @@ else:
                     shellInfo['damage'] = str(shot.shell.damage)
                     shellInfo['caliber'] = shot.shell.caliber
                     shellInfo['piercingPower'] = str(shot.piercingPower)
-                    shellInfo['speed'] = shot.speed
-                    shellInfo['gravity'] = shot.gravity
+                    shellInfo['speed'] = shot.speed/0.8
+                    shellInfo['gravity'] = shot.gravity/0.64
                     shellInfo['maxDistance'] = shot.maxDistance
                     if shot.shell.kind == 'HIGH_EXPLOSIVE':
                         shellInfo['explosionRadius'] = shot.shell.type.explosionRadius

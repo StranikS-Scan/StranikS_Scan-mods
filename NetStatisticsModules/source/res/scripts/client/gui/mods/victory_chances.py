@@ -173,7 +173,7 @@ def addVehicleInfo(vID, vInfo):
         tank['isEnemy'] = vInfo['team'] != BigWorld.player().team
         tank['isAlive'] = vInfo['isAlive']
         tank['level'] = vType.level
-        tank['hp'] = vType.maxHealth
+        tank['hp'] = tank['hpMax'] = vType.maxHealth
         #Gun -----------------------------------------------------------------
         tank['gun'] = {}
         tank['gun']['reload'] = float(vType.gun.reloadTime)
