@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V1.1.2 P2.7 W1.3.0 11.05.2019'
+__version__ = 'V1.1.3 P2.7 W1.5.0 16.05.2019'
 
 import BigWorld, Event
 from BattleReplay import g_replayCtrl
@@ -32,6 +32,9 @@ LOG_BATTLES = LOG_PLAYERS = LOG_EVENTS = False
 LOG_BATTLES_FILENAME = None
 LOG_PLAYERS_FILENAME = None
 LOG_EVENTS_FILENAME = None
+
+COLLIDE_INDENT = 2.0 #>--x
+COLLIDE_LENGTH = 5.0 #   x-----> 
 
 # Classes and functions ===========================================================
 
@@ -239,8 +242,8 @@ else:
                          '"PlayerAvatar.showTracer"',
                          '%s' % self.arena.vehicles[shooterID].get('accountDBID', '-'),
                          '',
-                         json.dumps({'shotID':shotID, 'isRicochet':isRicochet, 'effectsIndex':effectsIndex, 'refStartPoint':str(refStartPoint), \
-                                     'velocity':velocity.length/0.8, 'gravity':gravity/0.64, 'maxShotDist':maxShotDist})]
+                         json.dumps({'shotID': shotID, 'isRicochet': isRicochet, 'effectsIndex': effectsIndex, 'refStartPoint': str(refStartPoint), \
+                                     'velocity': velocity.length/0.8, 'gravity': gravity/0.64, 'maxShotDist': maxShotDist})]
             #Decode info
             shellInfo = {}
             for shot in self.arena.vehicles[shooterID]['vehicleType'].gun.shots:
@@ -291,9 +294,9 @@ else:
             hasPiercedHit = DamageFromShotDecoder.hasDamaged(maxHitEffectCode)
             attacker = BigWorld.entities.get(attackerID, None)
             attackerPos = attacker.position if isinstance(attacker, Vehicle) and attacker.inWorld and attacker.isStarted else player.arena.positions.get(attackerID)
-            eventInfo.append(json.dumps({'maxHitEffectCode':VEHICLE_HIT_EFFECT_NAMES.get(maxHitEffectCode), 'maxDamagedComponent':maxDamagedComponent, \
-                                         'hasPiercedHit':hasPiercedHit, 'distance':self.position.distTo(attackerPos) if attackerPos else None,
-                                         'hitPoints':[{'componentName':point.componentName, 'hitEffectGroup':point.hitEffectGroup} for point in decodedPoints] if decodedPoints else None}))
+            eventInfo.append(json.dumps({'maxHitEffectCode': VEHICLE_HIT_EFFECT_NAMES.get(maxHitEffectCode), 'maxDamagedComponent': maxDamagedComponent, \
+                                         'hasPiercedHit': hasPiercedHit, 'distance': self.position.distTo(attackerPos) if attackerPos else None,
+                                         'hitPoints': [{'componentName': point.componentName, 'hitEffectGroup': point.hitEffectGroup} for point in decodedPoints] if decodedPoints else None}))
             hitInfo = []
             if decodedPoints:
                 firstHitPoint = decodedPoints[0]
@@ -302,17 +305,20 @@ else:
                 firstHitDir = compMatrix.applyVector(firstHitDirLocal)
                 firstHitDir.normalise()
                 firstHitPos = compMatrix.applyPoint(firstHitPoint.matrix.translation)
-                collisions = self.appearance.collisions.collideAllWorld(firstHitPos - firstHitDir.scale(0.1), firstHitPos + firstHitDir.scale(5.0))
+                collisions = self.appearance.collisions.collideAllWorld(firstHitPos - firstHitDir.scale(COLLIDE_INDENT), firstHitPos + firstHitDir.scale(COLLIDE_LENGTH))
                 if collisions:
-                    base_distance = collisions[0][0]
+                    for collision in collisions: # >-c-b---c->
+                        base = collision[0]
+                        if collision[0] - COLLIDE_INDENT > -0.001:
+                            break
                     for collision in collisions:
                         if collision[3] < 0:
                             continue
                         if collision[3] not in TankPartIndexes.ALL:
                             break
                         material = self.getMatinfo(collision[3], collision[2])
-                        hitInfo.append({'distanse':collision[0] - base_distance, 'angleCos':collision[1], 'tankPart':TankPartIndexes.getName(collision[3]), \
-                                        'armor':material.armor if material else None})
+                        hitInfo.append({'distance': collision[0] - base, 'angleCos': collision[1], 'tankPart': TankPartIndexes.getName(collision[3]), \
+                                        'armor': material.armor if material else None})
                         if material and material.vehicleDamageFactor > 0 and collision[3] in (TankPartIndexes.HULL, TankPartIndexes.TURRET):
                             break
             eventInfo.append(json.dumps('layers: %s' % hitInfo) if hitInfo else '')
@@ -345,7 +351,7 @@ else:
                         shellInfo['explosionRadius'] = shot.shell.type.explosionRadius
                     break
             eventInfo.append(json.dumps(shellInfo) if shellInfo else '')
-            eventInfo.append(json.dumps({'distance':self.position.distTo(center)}))
+            eventInfo.append(json.dumps({'distance': self.position.distTo(center)}))
             printStrings(LOG_EVENTS_FILENAME, eventInfo)
 
     print '[%s] Loading mod: "simple_logger" %s (http://www.koreanrandom.com)' % (__author__, __version__)
