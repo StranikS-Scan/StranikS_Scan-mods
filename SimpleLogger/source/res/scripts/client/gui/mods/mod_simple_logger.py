@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V1.1.3 P2.7 W1.5.0 16.05.2019'
+__version__ = 'V1.1.3 P2.7 W1.5.0 18.05.2019'
 
 import BigWorld, Event
 from BattleReplay import g_replayCtrl
@@ -135,6 +135,9 @@ def onBattleLoaded(statistic):
 
 def onWGBattleLoaded(statistic):
     if LOG_PLAYERS:
+        player = BigWorld.player()
+        if not player or not hasattr(player, 'isOnArena'):
+            return
         global PLAYERS_STAT_COLLECT
         PLAYERS_STAT_COLLECT['WG'] = {}
         statistic = {x['account_id']: x for x in statistic['players']} if statistic and statistic.has_key('players') else {}
@@ -181,11 +184,17 @@ def onWGBattleLoaded(statistic):
                 PLAYERS_STAT_COLLECT['WG'][accountDBID] = playerInfo + playerStat + tankStat
         if 'XVM' in PLAYERS_STAT_COLLECT:
             for id in PLAYERS_STAT_COLLECT['WG']:
-                printStrings(LOG_PLAYERS_FILENAME, PLAYERS_STAT_COLLECT['WG'][id] + PLAYERS_STAT_COLLECT['XVM'][id])
+                if id in PLAYERS_STAT_COLLECT['XVM']:
+                    printStrings(LOG_PLAYERS_FILENAME, PLAYERS_STAT_COLLECT['WG'][id] + PLAYERS_STAT_COLLECT['XVM'][id])
+                else:
+                    printStrings(LOG_PLAYERS_FILENAME, PLAYERS_STAT_COLLECT['WG'][id])
             PLAYERS_STAT_COLLECT.clear()
 
 def onXVMBattleLoaded(statistic):
     if LOG_PLAYERS:
+        player = BigWorld.player()
+        if not player or not hasattr(player, 'isOnArena'):
+            return
         global PLAYERS_STAT_COLLECT
         PLAYERS_STAT_COLLECT['XVM'] = {}
         statistic = {x['_id']: x for x in statistic['players']} if statistic and statistic.has_key('players') else {}
@@ -197,7 +206,10 @@ def onXVMBattleLoaded(statistic):
                                                         '%d' % pStat['wtr'] if pStat['wtr'] else ''] if pStat else [''] * 3
         if 'WG' in PLAYERS_STAT_COLLECT:
             for id in PLAYERS_STAT_COLLECT['WG']:
-                printStrings(LOG_PLAYERS_FILENAME, PLAYERS_STAT_COLLECT['WG'][id] + PLAYERS_STAT_COLLECT['XVM'][id])
+                if id in PLAYERS_STAT_COLLECT['XVM']:
+                    printStrings(LOG_PLAYERS_FILENAME, PLAYERS_STAT_COLLECT['WG'][id] + PLAYERS_STAT_COLLECT['XVM'][id])
+                else:
+                    printStrings(LOG_PLAYERS_FILENAME, PLAYERS_STAT_COLLECT['WG'][id])
             PLAYERS_STAT_COLLECT.clear()
 
 try:
