@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V1.1.3 P2.7 W1.5.0 18.05.2019'
+__version__ = 'V1.1.4 P2.7 W1.5.0 23.05.2019'
 
 import BigWorld, Event
 from BattleReplay import g_replayCtrl
@@ -27,14 +27,11 @@ APPLICATION_ID = 'eJwzTExNMTFKTDU2szRITTUwT7EwMzSzSEwyMjcxtDRLMgUAk5oIkw=='.deco
 
 CSV_VERSION = '1.3'
 
-CONFIG_FILENAME = None
-LOG_BATTLES = LOG_PLAYERS = LOG_EVENTS = False
-LOG_BATTLES_FILENAME = None
-LOG_PLAYERS_FILENAME = None
-LOG_EVENTS_FILENAME = None
+LOG_BATTLES = LOG_PLAYERS = LOG_EVENTS = UNIQUE_SUBDIR = False
+CONFIG_FILENAME = LOG_DIR = LOG_BATTLES_FILENAME = LOG_PLAYERS_FILENAME = LOG_EVENTS_FILENAME = None
 
-COLLIDE_INDENT = 2.0 #>--x
-COLLIDE_LENGTH = 5.0 #   x-----> 
+COLLIDE_INDENT = 5.0  #>----x
+COLLIDE_LENGTH = 10.0 #     x----> 
 
 # Classes and functions ===========================================================
 
@@ -93,6 +90,25 @@ EVENTS_HEADER =  ('"arenaUniqueID"','"timeLeft"','timeLeftSec','"event"','"userD
 PLAYERS_STAT_COLLECT = {}
 
 def onBattleLoaded(statistic):
+    global LOG_BATTLES_FILENAME, LOG_PLAYERS_FILENAME, LOG_EVENTS_FILENAME
+    if UNIQUE_SUBDIR:
+        logName = 'temp'
+        replayFileName = g_replayCtrl.getAutoStartFileName()
+        if replayFileName is not None and replayFileName != '':
+            logName, _ = os.path.splitext(os.path.basename(replayFileName))
+        logPath = getLogPath(LOG_DIR + '/'+ logName + '_' + datetime.now().strftime('%d%m%y%H%M%S%f')[:15])
+    else:
+        logPath = getLogPath(LOG_DIR)
+    LOG_BATTLES_FILENAME = logPath + 'sl_battles_ver_%s.csv' % CSV_VERSION
+    LOG_PLAYERS_FILENAME = logPath + 'sl_players_ver_%s.csv' % CSV_VERSION
+    LOG_EVENTS_FILENAME = logPath + 'sl_events_ver_%s.csv' % CSV_VERSION
+    if LOG_BATTLES and not os.path.exists(LOG_BATTLES_FILENAME):
+        printStrings(LOG_BATTLES_FILENAME, BATTLES_HEADER)
+    if LOG_PLAYERS and not os.path.exists(LOG_PLAYERS_FILENAME):
+        printStrings(LOG_PLAYERS_FILENAME, PLAYERS_HEADER)
+    if LOG_EVENTS and not os.path.exists(LOG_EVENTS_FILENAME):
+        printStrings(LOG_EVENTS_FILENAME, EVENTS_HEADER)
+    #--------------
     if LOG_BATTLES:
         player = BigWorld.player()
         araneInfo = None
@@ -229,19 +245,11 @@ else:
     if CONFIG_FILENAME is not None:
         #Config ------------------------------------------
         config = json.loads(re.compile('(/\*(.|\n)*?\*/)|((#|//).*?$)', re.I | re.M).sub('', codecs.open(CONFIG_FILENAME, 'r', 'utf-8-sig').read()))
-        logPath = getLogPath(config['System']['Dir'] + ('/log_' + datetime.now().strftime('%d%m%y_%H%M%S_%f')[:17] if config['System']['UniquePostfix'] else ''))
-        LOG_BATTLES_FILENAME = logPath + 'sl_battles_ver_%s.csv' % CSV_VERSION
-        LOG_PLAYERS_FILENAME = logPath + 'sl_players_ver_%s.csv' % CSV_VERSION
-        LOG_EVENTS_FILENAME = logPath + 'sl_events_ver_%s.csv' % CSV_VERSION
+        LOG_DIR = config['System']['Dir']
+        UNIQUE_SUBDIR = config['System']['UniqueSubDir']
         LOG_BATTLES = config['System']['Log']['Battles']
         LOG_PLAYERS = config['System']['Log']['Players']
         LOG_EVENTS = config['System']['Log']['Events']
-        if LOG_BATTLES and not os.path.exists(LOG_BATTLES_FILENAME):
-            printStrings(LOG_BATTLES_FILENAME, BATTLES_HEADER)
-        if LOG_PLAYERS and not os.path.exists(LOG_PLAYERS_FILENAME):
-            printStrings(LOG_PLAYERS_FILENAME, PLAYERS_HEADER)
-        if LOG_EVENTS and not os.path.exists(LOG_EVENTS_FILENAME):
-            printStrings(LOG_EVENTS_FILENAME, EVENTS_HEADER)
 
     # Hooks ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -310,29 +318,37 @@ else:
                                          'hasPiercedHit': hasPiercedHit, 'distance': self.position.distTo(attackerPos) if attackerPos else None,
                                          'hitPoints': [{'componentName': point.componentName, 'hitEffectGroup': point.hitEffectGroup} for point in decodedPoints] if decodedPoints else None}))
             hitInfo = []
-            if decodedPoints:
-                firstHitPoint = decodedPoints[0]
-                compMatrix = Matrix(self.appearance.compoundModel.node(firstHitPoint.componentName))
-                firstHitDirLocal = firstHitPoint.matrix.applyToAxis(2)
-                firstHitDir = compMatrix.applyVector(firstHitDirLocal)
-                firstHitDir.normalise()
-                firstHitPos = compMatrix.applyPoint(firstHitPoint.matrix.translation)
-                collisions = self.appearance.collisions.collideAllWorld(firstHitPos - firstHitDir.scale(COLLIDE_INDENT), firstHitPos + firstHitDir.scale(COLLIDE_LENGTH))
-                if collisions:
-                    for collision in collisions: # >-c-b---c->
-                        base = collision[0]
-                        if collision[0] - COLLIDE_INDENT > -0.001:
-                            break
-                    for collision in collisions:
-                        if collision[3] < 0:
-                            continue
-                        if collision[3] not in TankPartIndexes.ALL:
-                            break
-                        material = self.getMatinfo(collision[3], collision[2])
-                        hitInfo.append({'distance': collision[0] - base, 'angleCos': collision[1], 'tankPart': TankPartIndexes.getName(collision[3]), \
-                                        'armor': material.armor if material else None})
-                        if material and material.vehicleDamageFactor > 0 and collision[3] in (TankPartIndexes.HULL, TankPartIndexes.TURRET):
-                            break
+            for encodedPoint in points:
+                compIdx, hitEffectCode, startPoint, endPoint = DamageFromShotDecoder.decodeSegment(encodedPoint, self.appearance.collisions, TankPartIndexes.ALL[-1])
+                if compIdx >= 0 and startPoint != endPoint: 
+                    compMatrix = Matrix(self.appearance.compoundModel.node(TankPartIndexes.getName(compIdx)))
+                    firstHitDir = endPoint - startPoint
+                    firstHitDir.normalise()
+                    firstHitDir = compMatrix.applyVector(firstHitDir)
+                    firstHitPos = compMatrix.applyPoint(startPoint)
+                    collisions = self.appearance.collisions.collideAllWorld(firstHitPos - firstHitDir.scale(COLLIDE_INDENT), firstHitPos + firstHitDir.scale(COLLIDE_LENGTH))
+                    if collisions:
+                        base = None
+                        testPointAdded = collidePointAdded = False
+                        for i, collision in enumerate(collisions):
+                            if collision[3] in TankPartIndexes.ALL:
+                                if base is None:
+                                    base = collision[0] 
+                                if not testPointAdded:
+                                    if collision[0] > COLLIDE_INDENT:
+                                        hitInfo.append('%sTestPoint(distance=%s, tankPart=%s)' % ('' if i > 0 else '', COLLIDE_INDENT - base, TankPartIndexes.getName(compIdx)))
+                                        testPointAdded = True
+                                material = self.getMatinfo(collision[3], collision[2])
+                                hitInfo.append({'distance': collision[0] - base, 'angleCos': collision[1], 'tankPart': TankPartIndexes.getName(collision[3]), \
+                                                'armor': material.armor if material else None})
+                                if not collidePointAdded:
+                                    collidePointAdded = True
+                                if material and material.vehicleDamageFactor > 0 and collision[3] in (TankPartIndexes.HULL, TankPartIndexes.TURRET):
+                                    break
+                        if collidePointAdded:
+                            if not testPointAdded and base is not None:
+                                hitInfo.append('TestPoint(distance=%s, tankPart=%s)' % (COLLIDE_INDENT - base, TankPartIndexes.getName(compIdx)))
+                    break
             eventInfo.append(json.dumps('layers: %s' % hitInfo) if hitInfo else '')
             printStrings(LOG_EVENTS_FILENAME, eventInfo)
 
