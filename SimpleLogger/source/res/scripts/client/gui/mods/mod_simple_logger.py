@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V1.1.4 P2.7 W1.5.0 23.05.2019'
+__version__ = 'V1.2.0 P2.7 W1.5.1 28.07.2019'
 
 import BigWorld, Event
 from BattleReplay import g_replayCtrl
@@ -19,19 +19,24 @@ import re
 import os, codecs, json
 import unicodedata
 from datetime import datetime
-from Math import Matrix
+from Math import Matrix, Vector3
 
 # Consts and Vars ..........................................................................
 
 APPLICATION_ID = 'eJwzTExNMTFKTDU2szRITTUwT7EwMzSzSEwyMjcxtDRLMgUAk5oIkw=='.decode('base64').decode('zlib')
 
-CSV_VERSION = '1.3'
+CONFIG_VERSION = '1.1'
+CSV_VERSION    = '1.4'
 
 LOG_BATTLES = LOG_PLAYERS = LOG_EVENTS = UNIQUE_SUBDIR = False
 CONFIG_FILENAME = LOG_DIR = LOG_BATTLES_FILENAME = LOG_PLAYERS_FILENAME = LOG_EVENTS_FILENAME = None
 
 COLLIDE_INDENT = 5.0  #>----x
 COLLIDE_LENGTH = 10.0 #     x----> 
+
+COLLIDE_MULTI  = False
+COLLIDE_SCHEME = 'cross'
+COLLIDE_SCALE = 1.0
 
 # Classes and functions ===========================================================
 
@@ -76,14 +81,85 @@ def getTimeLeft():
 BONUS_TYPE_NAMES = {getattr(ARENA_BONUS_TYPE, k):k for k in dir(ARENA_BONUS_TYPE)[::-1] if not k.startswith('_') and isinstance(getattr(ARENA_BONUS_TYPE, k), int)}
 VEHICLE_HIT_EFFECT_NAMES = {getattr(VEHICLE_HIT_EFFECT, k):k for k in dir(VEHICLE_HIT_EFFECT)[::-1] if not k.startswith('_') and isinstance(getattr(VEHICLE_HIT_EFFECT, k), int)}
 
+class _CSHexahedron(object):
+    NAME = 'hexahedron'
+    directions = property(lambda self: self.__dirVectors)
+
+    def __init__(self, width, height, depth, scale):
+        self.__scale = scale
+        self.__width  = round(width * self.__scale, 3)
+        self.__height = round(height * self.__scale, 3)
+        self.__depth  = round(depth * self.__scale, 3)
+        self.__dirVectors = [Vector3(0.0, 0.0, 0.0),
+                             Vector3(self.__width, self.__height, -self.__depth),
+                             Vector3(self.__width, -self.__height, -self.__depth),
+                             Vector3(-self.__width, -self.__height, -self.__depth),
+                             Vector3(-self.__width, self.__height, -self.__depth),
+                             Vector3(self.__width, self.__height, self.__depth),
+                             Vector3(self.__width, -self.__height, self.__depth),
+                             Vector3(-self.__width, -self.__height, self.__depth),
+                             Vector3(-self.__width, self.__height, self.__depth)]
+        self.__dirNames = ['Center', 
+                           'Up-Right-Back',
+                           'Down-Right-Back',
+                           'Down-Left-Back',
+                           'Up-Left-Back',
+                           'Up-Right-Forward',
+                           'Down-Right-Forward',
+                           'Down-Left-Forward',
+                           'Up-Left-Forward']
+
+    def format(self, layers):
+        return '{scheme: %s, (dW,dH,dD): (%.3f,%.3f,%.3f), scale: %s, layers: {%s}}' % (self.NAME, self.__width, self.__height, self.__depth, self.__scale, \
+               ', '.join('%s: %s' % (self.__dirNames[i], layer) for i, layer in enumerate(layers) if layer))
+
+class _CSCross(object):
+    NAME = 'cross'
+    directions = property(lambda self: self.__dirVectors)
+
+    def __init__(self, width, height, depth, scale):
+        self.__scale = scale
+        self.__width  = round(width * self.__scale, 3)
+        self.__height = round(height * self.__scale, 3)
+        self.__depth  = round(depth * self.__scale, 3) 
+        self.__dirVectors = [Vector3(0.0, 0.0, 0.0),
+                             Vector3(0.0, self.__height, 0.0),
+                             Vector3(self.__width, 0.0, 0.0),
+                             Vector3(0.0, -self.__height, 0.0),
+                             Vector3(-self.__width, 0.0, 0.0),
+                             Vector3(0.0, 0.0, -self.__depth),
+                             Vector3(0.0, 0.0, self.__depth)]
+        self.__dirNames = ['Center', 
+                           'Up',
+                           'Right',
+                           'Down',
+                           'Left',
+                           'Back',
+                           'Forward']
+
+    def format(self, layers):
+        return '{scheme: %s, (dW,dH,dD): (%.3f,%.3f,%.3f), scale: %s, layers: {%s}}' % (self.NAME, self.__width, self.__height, self.__depth, self.__scale, \
+               ', '.join('%s: %s' % (self.__dirNames[i], layer) for i, layer in enumerate(layers) if layer))
+
+class _CSCenter(object):
+    NAME = 'center'
+    directions = property(lambda self: self.__dirVectors)
+
+    def __init__(self):
+        self.__dirVectors = [Vector3(0.0, 0.0, 0.0)]
+        self.__dirNames = ['Center']
+
+    def format(self, layers):
+        return '%s' % layers
+
 # CSV -----------------------------------------------------------------
 
-BATTLES_HEADER = ('"arenaUniqueID"','"dateTime"','"serverName"','"playerDBID"', '"userName"', '"vehicleTypeTag"', '"vehicleTypeNFKD"', '"vehicleLevel"', \
+BATTLES_HEADER = ('"arenaUniqueID"','"dateTime"','"serverName"','"playerDBID"', '"userName"', '"vehicleTypeTag"', '"vehicleTypeNFKD"', '"vehicleLevel"',
                   '"arenaGuiType"','"arenaTypeID"','"arenaBonusType"','"arenaKind"','"battleLevel"') + \
                  ('"allyTanksCount"','"enemyTanksCount"','"allyTeamHP"','"enemyTeamHP"','"allyTanksAvgLevel"','"enemyTanksAvgLevel"')
 PLAYERS_HEADER = ('"arenaUniqueID"','"accountDBID"','"userName"','"isEnemy"','"vehicleTypeTag"','"vehicleTypeNFKD"','"level"','"hp"') + \
-                 ('"BATTLES"','"WINS"','"EXP"','"DAMAGE"','"FRAGS"','"SPOTTED"','"CAPTURE"','"DEFENSE"','"ACCURACY"','"SURVIVED"',"WN8","EFF","XTE",\
-                  '"battles"','"wins"','"experience"','"damage"','"frags"','"spot"','"capture"','"defense"','"accuracy"','"survived"','"wn8"','"eff"','"xte"', \
+                 ('"BATTLES"','"WINS"','"EXP"','"DAMAGE"','"FRAGS"','"SPOTTED"','"CAPTURE"','"DEFENSE"','"ACCURACY"','"SURVIVED"',"WN8","EFF","XTE",
+                  '"battles"','"wins"','"experience"','"damage"','"frags"','"spot"','"capture"','"defense"','"accuracy"','"survived"','"wn8"','"eff"','"xte"',
                   '"WN8(XVM)"','"WGR(XVM)"','"WTR(XVM)"')
 EVENTS_HEADER =  ('"arenaUniqueID"','"timeLeft"','timeLeftSec','"event"','"userDBID"','"attakerDBID"','"initialInfo"','"shellInfo"','"decodeInfo"')
 
@@ -245,11 +321,18 @@ else:
     if CONFIG_FILENAME is not None:
         #Config ------------------------------------------
         config = json.loads(re.compile('(/\*(.|\n)*?\*/)|((#|//).*?$)', re.I | re.M).sub('', codecs.open(CONFIG_FILENAME, 'r', 'utf-8-sig').read()))
-        LOG_DIR = config['System']['Dir']
-        UNIQUE_SUBDIR = config['System']['UniqueSubDir']
-        LOG_BATTLES = config['System']['Log']['Battles']
-        LOG_PLAYERS = config['System']['Log']['Players']
-        LOG_EVENTS = config['System']['Log']['Events']
+        if 'System' in config and 'Version' in config['System'] and config['System']['Version'] == CONFIG_VERSION:
+            LOG_DIR = config['Log']['Dir']
+            UNIQUE_SUBDIR = config['Log']['UniqueSubDir']
+            LOG_BATTLES = config['Log']['Files']['Battles']
+            LOG_PLAYERS = config['Log']['Files']['Players']
+            LOG_EVENTS = config['Log']['Files']['Events']
+            #Collider ---
+            COLLIDE_INDENT = config['Mechanics']['ShotsCollider']['CollideIndent']
+            COLLIDE_LENGTH = config['Mechanics']['ShotsCollider']['CollideLength']
+            COLLIDE_MULTI = config['Mechanics']['ShotsCollider']['MultiCollide']['Enable']
+            COLLIDE_SCHEME = config['Mechanics']['ShotsCollider']['MultiCollide']['Scheme'].lower()
+            COLLIDE_SCALE = config['Mechanics']['ShotsCollider']['MultiCollide']['ShapeScale']
 
     # Hooks ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -262,8 +345,8 @@ else:
                          '"PlayerAvatar.showTracer"',
                          '%s' % self.arena.vehicles[shooterID].get('accountDBID', '-'),
                          '',
-                         json.dumps({'shotID': shotID, 'isRicochet': isRicochet, 'effectsIndex': effectsIndex, 'refStartPoint': str(refStartPoint), \
-                                     'velocity': velocity.length/0.8, 'gravity': gravity/0.64, 'maxShotDist': maxShotDist})]
+                         json.dumps({'shotID': shotID, 'isRicochet': isRicochet, 'effectsIndex': effectsIndex,
+                                     'velocity': round(velocity.length/0.8, 3), 'gravity': round(gravity/0.64, 3), 'maxShotDist': maxShotDist})]
             #Decode info
             shellInfo = {}
             for shot in self.arena.vehicles[shooterID]['vehicleType'].gun.shots:
@@ -273,8 +356,8 @@ else:
                     shellInfo['damage'] = str(shot.shell.damage)
                     shellInfo['caliber'] = shot.shell.caliber
                     shellInfo['piercingPower'] = str(shot.piercingPower)
-                    shellInfo['speed'] = shot.speed/0.8
-                    shellInfo['gravity'] = shot.gravity/0.64
+                    shellInfo['speed'] = round(shot.speed/0.8, 3)
+                    shellInfo['gravity'] = round(shot.gravity/0.64, 3)
                     shellInfo['maxDistance'] = shot.maxDistance
                     if shot.shell.kind == 'HIGH_EXPLOSIVE':
                         shellInfo['explosionRadius'] = shot.shell.type.explosionRadius
@@ -288,12 +371,13 @@ else:
         if LOG_EVENTS and attackerID > 0:
             player = BigWorld.player()
             #Initial info
+            points_count = len(points) if points else 0
             timeLeft, timeLeftSec = getTimeLeft()
             eventInfo = ['%s' % player.arenaUniqueID, timeLeft, timeLeftSec,
                          '"Vehicle.showDamageFromShot"',
                          '%s' % player.arena.vehicles[self.id].get('accountDBID', '-'),
                          '%s' % player.arena.vehicles[attackerID].get('accountDBID', '-'),
-                         json.dumps({'points':len(points) if points else 0, 'effectsIndex':effectsIndex, 'damageFactor':damageFactor})]
+                         json.dumps({'points':points_count, 'effectsIndex':effectsIndex, 'damageFactor':damageFactor})]
             #Decode info
             shellInfo = {}
             for shot in player.arena.vehicles[attackerID]['vehicleType'].gun.shots:
@@ -303,8 +387,8 @@ else:
                     shellInfo['damage'] = str(shot.shell.damage)
                     shellInfo['caliber'] = shot.shell.caliber
                     shellInfo['piercingPower'] = str(shot.piercingPower)
-                    shellInfo['speed'] = shot.speed/0.8
-                    shellInfo['gravity'] = shot.gravity/0.64
+                    shellInfo['speed'] = round(shot.speed/0.8, 3)
+                    shellInfo['gravity'] = round(shot.gravity/0.64, 3)
                     shellInfo['maxDistance'] = shot.maxDistance
                     if shot.shell.kind == 'HIGH_EXPLOSIVE':
                         shellInfo['explosionRadius'] = shot.shell.type.explosionRadius
@@ -314,42 +398,58 @@ else:
             hasPiercedHit = DamageFromShotDecoder.hasDamaged(maxHitEffectCode)
             attacker = BigWorld.entities.get(attackerID, None)
             attackerPos = attacker.position if isinstance(attacker, Vehicle) and attacker.inWorld and attacker.isStarted else player.arena.positions.get(attackerID)
-            eventInfo.append(json.dumps({'maxHitEffectCode': VEHICLE_HIT_EFFECT_NAMES.get(maxHitEffectCode), 'maxDamagedComponent': maxDamagedComponent, \
-                                         'hasPiercedHit': hasPiercedHit, 'distance': self.position.distTo(attackerPos) if attackerPos else None,
+            eventInfo.append(json.dumps({'maxHitEffectCode': VEHICLE_HIT_EFFECT_NAMES.get(maxHitEffectCode), 'maxDamagedComponent': maxDamagedComponent,
+                                         'hasPiercedHit': hasPiercedHit, 'distance': round(self.position.distTo(attackerPos), 3) if attackerPos else None,
                                          'hitPoints': [{'componentName': point.componentName, 'hitEffectGroup': point.hitEffectGroup} for point in decodedPoints] if decodedPoints else None}))
-            hitInfo = []
-            for encodedPoint in points:
+            for num, encodedPoint in enumerate(points, 1):
+                hitsInfo = [] #[[Dir1-Layer1, ...], [Dir2-Layer1, ...], ...]
+                hitsScheme = None
                 compIdx, hitEffectCode, startPoint, endPoint = DamageFromShotDecoder.decodeSegment(encodedPoint, self.appearance.collisions, TankPartIndexes.ALL[-1])
                 if compIdx >= 0 and startPoint != endPoint: 
-                    compMatrix = Matrix(self.appearance.compoundModel.node(TankPartIndexes.getName(compIdx)))
+                    convertedCompIdx = DamageFromShotDecoder.convertComponentIndex(compIdx)
+                    bbox = self.appearance.collisions.getBoundingBox(convertedCompIdx)
+                    width, height, depth = (bbox[1] - bbox[0]) / 256.0
+                    if COLLIDE_MULTI:
+                        if COLLIDE_SCHEME == 'hexahedron':
+                            hitsScheme = _CSHexahedron(width, height, depth, COLLIDE_SCALE)
+                        elif COLLIDE_SCHEME == 'cross':
+                            hitsScheme = _CSCross(width, height, depth, COLLIDE_SCALE)
+                        else:
+                            hitsScheme = _CSCenter()
+                    else:
+                        hitsScheme = _CSCenter()
+                    compMatrix = Matrix(self.appearance.compoundModel.node(TankPartIndexes.getName(convertedCompIdx)))
                     firstHitDir = endPoint - startPoint
                     firstHitDir.normalise()
                     firstHitDir = compMatrix.applyVector(firstHitDir)
                     firstHitPos = compMatrix.applyPoint(startPoint)
-                    collisions = self.appearance.collisions.collideAllWorld(firstHitPos - firstHitDir.scale(COLLIDE_INDENT), firstHitPos + firstHitDir.scale(COLLIDE_LENGTH))
-                    if collisions:
-                        base = None
-                        testPointAdded = collidePointAdded = False
-                        for i, collision in enumerate(collisions):
-                            if collision[3] in TankPartIndexes.ALL:
-                                if base is None:
-                                    base = collision[0] 
-                                if not testPointAdded:
-                                    if collision[0] > COLLIDE_INDENT:
-                                        hitInfo.append('%sTestPoint(distance=%s, tankPart=%s)' % ('' if i > 0 else '', COLLIDE_INDENT - base, TankPartIndexes.getName(compIdx)))
-                                        testPointAdded = True
-                                material = self.getMatinfo(collision[3], collision[2])
-                                hitInfo.append({'distance': collision[0] - base, 'angleCos': collision[1], 'tankPart': TankPartIndexes.getName(collision[3]), \
-                                                'armor': material.armor if material else None})
-                                if not collidePointAdded:
-                                    collidePointAdded = True
-                                if material and material.vehicleDamageFactor > 0 and collision[3] in (TankPartIndexes.HULL, TankPartIndexes.TURRET):
-                                    break
-                        if collidePointAdded:
-                            if not testPointAdded and base is not None:
-                                hitInfo.append('TestPoint(distance=%s, tankPart=%s)' % (COLLIDE_INDENT - base, TankPartIndexes.getName(compIdx)))
-                    break
-            eventInfo.append(json.dumps('layers: %s' % hitInfo) if hitInfo else '')
+                    for direction in hitsScheme.directions:
+                        hitInfo = []
+                        collisions = self.appearance.collisions.collideAllWorld(firstHitPos - firstHitDir.scale(COLLIDE_INDENT) + direction, firstHitPos + firstHitDir.scale(COLLIDE_LENGTH) + direction)
+                        if collisions:
+                            base = None
+                            testPointAdded = collidePointAdded = False
+                            for collision in collisions:
+                                if collision[3] in TankPartIndexes.ALL:
+                                    if base is None:
+                                        base = collision[0] 
+                                    if not testPointAdded:
+                                        if collision[0] > COLLIDE_INDENT:
+                                            hitInfo.append('TestPoint%s(distance=%s, tankPart=%s)' % (num if points_count > 1 else '', round(COLLIDE_INDENT - base, 4), TankPartIndexes.getName(convertedCompIdx)))
+                                            testPointAdded = True
+                                    material = self.getMatinfo(collision[3], collision[2])
+                                    hitInfo.append({'distance': round(collision[0] - base, 4), 'angleCos': round(collision[1], 4), 'tankPart': TankPartIndexes.getName(collision[3]),
+                                                    'armor': round(material.armor, 4) if material else None})
+                                    if not collidePointAdded:
+                                        collidePointAdded = True
+                                    if material and material.vehicleDamageFactor > 0 and collision[3] in (TankPartIndexes.HULL, TankPartIndexes.TURRET):
+                                        break
+                            if collidePointAdded:
+                                if not testPointAdded and base is not None:
+                                    hitInfo.append('TestPoint%s(distance=%s, tankPart=%s)' % (num if points_count > 1 else '', round(COLLIDE_INDENT - base, 4), TankPartIndexes.getName(convertedCompIdx)))
+                        hitsInfo.append(hitInfo)
+                eventInfo.append(json.dumps('%s: %s' % ('TestPoint%d' % num if points_count > 1 else 'layers' if hitsScheme.NAME == 'center' else 'TestPoint', \
+                                                        hitsScheme.format(hitsInfo[0] if hitsScheme.NAME == 'center' else hitsInfo) if hitsScheme else '[]')))
             printStrings(LOG_EVENTS_FILENAME, eventInfo)
 
     @g_overrideLib.registerEvent(Vehicle, 'showDamageFromExplosion')
@@ -372,8 +472,8 @@ else:
                     shellInfo['damage'] = str(shot.shell.damage)
                     shellInfo['caliber'] = shot.shell.caliber
                     shellInfo['piercingPower'] = str(shot.piercingPower)
-                    shellInfo['speed'] = shot.speed/0.8
-                    shellInfo['gravity'] = shot.gravity/0.64
+                    shellInfo['speed'] = round(shot.speed/0.8, 3)
+                    shellInfo['gravity'] = round(shot.gravity/0.64, 3)
                     shellInfo['maxDistance'] = shot.maxDistance
                     if shot.shell.kind == 'HIGH_EXPLOSIVE':
                         shellInfo['explosionRadius'] = shot.shell.type.explosionRadius

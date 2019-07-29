@@ -15,7 +15,7 @@ Install the mod into the game and run the replay, the information from which you
 The mod settings are in the file "World_of_Tanks\mods\configs\SimpleLogger\SimpleLogger.cfg".
 
 ## Examples
-Examples of studying hits in the tank using mod can be found [here](./examples/EXAMPLES.md)
+Examples of studying hits in the tank using mod can be found in [Wiki](https://github.com/StranikS-Scan/StranikS_Scan-mods/wiki)
 
 ## History
 With the history of versions can be found [here](./HISTORY.md)
