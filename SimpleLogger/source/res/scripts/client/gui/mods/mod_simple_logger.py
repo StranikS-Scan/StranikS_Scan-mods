@@ -161,7 +161,7 @@ PLAYERS_HEADER = ('"arenaUniqueID"','"accountDBID"','"userName"','"isEnemy"','"v
                  ('"BATTLES"','"WINS"','"EXP"','"DAMAGE"','"FRAGS"','"SPOTTED"','"CAPTURE"','"DEFENSE"','"ACCURACY"','"SURVIVED"',"WN8","EFF","XTE",
                   '"battles"','"wins"','"experience"','"damage"','"frags"','"spot"','"capture"','"defense"','"accuracy"','"survived"','"wn8"','"eff"','"xte"',
                   '"WN8(XVM)"','"WGR(XVM)"','"WTR(XVM)"')
-EVENTS_HEADER =  ('"arenaUniqueID"','"timeLeft"','timeLeftSec','"event"','"userDBID"','"attakerDBID"','"initialInfo"','"shellInfo"','"decodeInfo"')
+EVENTS_HEADER =  ('"arenaUniqueID"','"timeLeft"','"timeLeftSec"','"event"','"userDBID"','"attakerDBID"','"initialInfo"','"shellInfo"','"decodeInfo"')
 
 PLAYERS_STAT_COLLECT = {}
 
