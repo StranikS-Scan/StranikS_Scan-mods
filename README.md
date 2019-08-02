@@ -9,5 +9,5 @@ Various author's mods for the **WorldfOfTanks**.
 * [EmblemsOff](./EmblemsOff/) - Mod disables loading clan emblems that are displayed on tanks
 
 ## Other mods:
-* [.deprecated](./.deprecated/) - Mods that are outdated and not supported
 * [.experiments](./.experiments/) - Mods for experimenting with the game
+* [.deprecated](./.deprecated/) - Mods that are outdated and not supported
