@@ -1,6 +1,6 @@
 <root>
     <id>mod.SPGDispersion</id>
-    <version>1.0</version>
+    <version>1.1</version>
     <name>SPGDispersion</name>
     <description>Mod for experiments, log information about the dispersion of the artillery hit points from the aiming point</description>
 </root>
