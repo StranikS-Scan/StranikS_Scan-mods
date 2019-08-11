@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V1.0 P2.7 10.08.2019'
+__version__ = 'V1.1 P2.7 11.08.2019'
 
 import os, codecs
 from datetime import datetime
@@ -18,7 +18,7 @@ URL_TIMEOUT   = 3
 THREADS_COUNT = 8    #if WG_API_STATS is True then maximum 10 due to server limitations otherwise can be more
 CACHE_SIZE    = 100  #Number of records accumulated in memory before writing to a file
 
-CSV_VERSION  = '1.0' #Do not change!
+CSV_VERSION  = '1.1' #Do not change!
 LOG_FILENAME = 'Log/Log_ver_{CSV}_{UNQ}.csv' #{CSV} - csv version; {UNQ} - unique file ID
 
 WG_API_STATS   = True #Download player stat from WG-server
@@ -86,6 +86,7 @@ class _Replays(object):
     HEAD_PLAYER_ID    = 'PlayerID'
     HEAD_PLAYER_NAME  = 'PlayerName'
     HEAD_PLAYER_TANK  = 'PlayerTank'
+    HEAD_RESULT       = 'Result'
     HEAD_PREMIUM      = 'isPremium'
     HEAD_PLATOON      = 'isPlatoon'
     HEAD_PLAYER_SHOTS = 'PlayerShots'
@@ -161,12 +162,14 @@ class _Replays(object):
     def __parseHtml(self, text):
         stat = {}                                                             #http://wotreplays.ru/site/12323660
         try:
+            text = text.split('replay-stats__hat replay-stats__hat--', 1)[1]  #690  lose">...
+            stat[self.HEAD_RESULT], text = text.split('">', 1)
             text = text.split('/static/img/wot/dynamic/Maps/', 1)[1]          #822  08_ruinberg.png" alt="Руинберг"/>...
             stat[self.HEAD_MAP_NAME], text = text.split('.png', 1)
             text = text.split('replay-stats__timestamp">', 1)[1]              #833  10.08.2019 07:21</div>...
-            stat[self.HEAD_DATETIME], text = text.split('<', 1)
+            stat[self.HEAD_DATETIME], text = text.split('</div>', 1)
             text = text.split('replay-stats__earnings_table--', 1)[1]         #837  premium">...
-            isPremium, text = text.split('"', 1)
+            isPremium, text = text.split('">', 1)
             stat[self.HEAD_PREMIUM] = 'non' not in isPremium
             text = text.split('worldoftanks.ru/ru/community/accounts/', 1)[1] #895  35528821-N_U_B_O_R_A_K/"...
             playerID, text = text.split('-', 1)
@@ -174,7 +177,7 @@ class _Replays(object):
             stat[self.HEAD_PLAYER_ID] = playerID
             text = text.split('replay__info clearfix', 1)[1]                  #1819 ">\n  <li>\n  <span class="b-label">Версия:</span>\n 1.6.0 </li>...
             text = text.split('</span>', 1)[1]
-            clientVer, text = text.split('<', 1)
+            clientVer, text = text.split('</li>', 1)
             stat[self.HEAD_CLIENT_VER] = '[%s]' % clientVer.strip()
             text = text.split('b-replay__img_wrap', 1)[1]                     #1824 ">...
             text = text.split('</span>', 1)[1]                                #1827 I  </span>
@@ -225,6 +228,7 @@ Replays = _Replays(_Collector(LOG_FILENAME.format(CSV=CSV_VERSION, UNQ=getUnique
                                _Replays.HEAD_PLAYER_ID,
                                _Replays.HEAD_PLAYER_NAME,
                                _Replays.HEAD_PLAYER_TANK,
+                               _Replays.HEAD_RESULT,
                                _Replays.HEAD_PREMIUM,
                                _Replays.HEAD_PLATOON,
                                _Replays.HEAD_PLAYER_SHOTS,
