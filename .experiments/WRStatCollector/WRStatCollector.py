@@ -135,7 +135,7 @@ class _Replays(object):
         if text:
             res, stat = self.__parseHtml(text)
             if not res:
-                print '%d not standard or corrupted!' % rID 
+                print '%d not standard or interrupted!' % rID 
             if stat:
                 stat[self.HEAD_REPLAY_ID] = rID
                 stat[self.HEAD_REPLAY_URL] = request
