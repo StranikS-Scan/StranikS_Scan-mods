@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 
 __author__  = 'StranikS_Scan'
-__version__ = 'V2.5 P2.7 W1.3.0 18.01.2019'
+__version__ = 'V2.6 P2.7 W1.13.0 28.07.2021'
 
 import BigWorld
 from Event import Event
@@ -136,8 +136,8 @@ def new_onHealthChanged(self, *a, **k):
                 reasone = UPDATE_REASONE.VEHICLE_DEATH
             g_TanksStatistic.update(reasone, self.id)
 
-@g_overrideLib.registerEvent(PlayerAvatar, 'vehicle_onEnterWorld')
-def new_vehicle_onEnterWorld(self, vehicle):
+@g_overrideLib.registerEvent(PlayerAvatar, 'vehicle_onAppearanceReady')
+def new_vehicle_onAppearanceReady(self, vehicle):
     if vehicle.id in g_TanksStatistic.base:
         entity = BigWorld.entity(vehicle.id)
         if entity:
